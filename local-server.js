@@ -769,7 +769,12 @@ async function handleApiRoute(req, res, pathname) {
 // 4. Start Server
 // ==========================================
 async function main() {
-  await initDatabase();
+  try {
+    await initDatabase();
+  } catch (err) {
+    console.warn('[Database] Local MySQL connection failed or not started:', err.message);
+    console.warn('[Database] Server will continue running in fallback mode.');
+  }
 
   server.listen(PORT, () => {
     console.log('========================================================');
@@ -783,5 +788,4 @@ async function main() {
 
 main().catch(err => {
   console.error('Fatal Server Error:', err);
-  process.exit(1);
 });
