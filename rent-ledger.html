@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NestPad — Financial Rent & Charges Ledger</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main id="main-content" class="main-content">
+      <div id="header-container"></div>
+
+      <div class="page-body">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">
+              FINANCIAL ACCOUNTING & RENT ROLL
+            </div>
+            <h2 style="font-size: 28px; font-weight: 800; margin-top: 4px;">Charge, Payment & Deposit Ledger</h2>
+            <p style="color: var(--text-muted);">Relational accounting model: Charges are billed, Payments land, and Allocations resolve outstanding tenant balances.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Print Statement</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportLedgerCSV()">📥 Export CSV</button>
+            <button class="btn btn-primary btn-sm" onclick="openRecordPaymentModal()">💵 Record Payment</button>
+          </div>
+        </div>
+
+        <!-- Collection Horizon Overview -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Billed (October)</span>
+            <div id="ledger-total-billed" style="font-size: 32px; font-weight: 800; margin: 8px 0;">$0</div>
+            <span class="badge badge-info">Monthly Expected Rent</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Collected</span>
+            <div id="ledger-total-collected" style="font-size: 32px; font-weight: 800; color: var(--primary); margin: 8px 0;">$0</div>
+            <span id="ledger-rate-badge" class="badge badge-paid">● 0% Settled</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Overdue</span>
+            <div id="ledger-total-overdue" style="font-size: 32px; font-weight: 800; color: #dc2626; margin: 8px 0;">$0</div>
+            <span id="ledger-overdue-count-badge" class="badge badge-overdue">0 Charges Late</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Escrow Deposits Held</span>
+            <div id="ledger-total-deposits" style="font-size: 32px; font-weight: 800; margin: 8px 0;">$0</div>
+            <span class="badge badge-paid">Protected in Trust</span>
+          </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; box-shadow: var(--shadow-sm); flex-wrap: wrap;">
+          <div style="display: flex; gap: 12px; align-items: center; flex: 1;">
+            <input type="text" id="ledger-search" class="form-control" style="max-width: 260px;" placeholder="Search tenant, unit, ref..." oninput="renderLedgerTable()">
+            
+            <select id="ledger-status-filter" class="form-control" style="max-width: 170px;" onchange="renderLedgerTable()">
+              <option value="all">All Statuses</option>
+              <option value="Paid">Paid</option>
+              <option value="Overdue">Overdue</option>
+              <option value="Due">Due</option>
+            </select>
+
+            <select id="ledger-period-filter" class="form-control" style="max-width: 180px;" onchange="renderLedgerTable()">
+              <option value="all">All Periods</option>
+              <option value="October 2024" selected>October 2024</option>
+              <option value="November 2026">November 2026</option>
+            </select>
+          </div>
+
+          <button class="btn btn-secondary btn-sm" onclick="openNewChargeModal()">+ Add Manual Charge</button>
+        </div>
+
+        <!-- Master Rent Charges Table -->
+        <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-xl); overflow: hidden; margin-bottom: 36px; box-shadow: var(--shadow-sm);">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>CHARGE ID</th>
+                <th>UNIT & TENANT</th>
+                <th>PERIOD</th>
+                <th>AMOUNT</th>
+                <th>DUE DATE</th>
+                <th>STATUS</th>
+                <th>PAYMENT METHOD / REF</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="ledger-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Deposit Escrow Accounts -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3 style="font-size: 18px; font-weight: 800;">🏦 Deposit Ledgers & Move-Out Dispute Protection</h3>
+            <p style="font-size: 12.5px; color: var(--text-muted);">Segregated security, utility, and access key deposit escrows held per tenancy agreement.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="openDepositTransactionModal()">+ Record Deposit Adjustment</button>
+        </div>
+
+        <div id="deposits-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/shared.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSharedLayout('ledger');
+      refreshCurrentPage();
+    });
+
+    function refreshCurrentPage() {
+      renderSharedLayout('ledger');
+      const m = logic.getMetrics();
+      const db = dbStore.getDB();
+
+      document.getElementById('ledger-total-billed').innerText = `$${m.totalBilled.toLocaleString()}`;
+      document.getElementById('ledger-total-collected').innerText = `$${m.totalCollected.toLocaleString()}`;
+      document.getElementById('ledger-rate-badge').innerText = `● ${m.collectionRate}% Collected`;
+      document.getElementById('ledger-total-overdue').innerText = `$${m.overdueAmount.toLocaleString()}`;
+      document.getElementById('ledger-overdue-count-badge').innerText = `${m.overdueCount} Charges Late`;
+
+      // Calculate total deposits held
+      const totalDeposits = (db.depositLedgers || []).reduce((sum, d) => {
+        return sum + (Number(d.secDepositRec || 0) + Number(d.utilDepositRec || 0) + Number(d.keyDepositRec || 0));
+      }, 0);
+      document.getElementById('ledger-total-deposits').innerText = `$${totalDeposits.toLocaleString()}`;
+
+      renderLedgerTable();
+      renderDepositLedgers();
+    }
+
+    function renderLedgerTable() {
+      const db = dbStore.getDB();
+      const charges = db.charges || [];
+      const payments = db.payments || [];
+      const allocations = db.allocations || [];
+      const tenancies = db.tenancies || [];
+      const units = db.units || [];
+      const parties = db.tenancyParties || [];
+      const persons = db.persons || [];
+
+      const search = (document.getElementById('ledger-search').value || '').toLowerCase();
+      const statusFilter = document.getElementById('ledger-status-filter').value;
+      const periodFilter = document.getElementById('ledger-period-filter').value;
+      const tbody = document.getElementById('ledger-table-body');
+
+      const filtered = charges.filter(c => {
+        const t = tenancies.find(x => x.id === c.tenancyId);
+        const u = t ? units.find(x => x.id === t.unitId) : null;
+        const tp = t ? parties.find(x => x.tenancyId === t.id && x.role === 'Primary Tenant') : null;
+        const p = tp ? persons.find(x => x.id === tp.personId) : null;
+
+        const matchStatus = statusFilter === 'all' || c.status === statusFilter;
+        const matchPeriod = periodFilter === 'all' || c.period === periodFilter;
+        const matchSearch = !search ||
+          c.id.toLowerCase().includes(search) ||
+          (u && u.unitNumber.toLowerCase().includes(search)) ||
+          (p && p.name.toLowerCase().includes(search));
+
+        return matchStatus && matchPeriod && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 36px; color: var(--text-muted);">
+              No charges match the selected filter.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(c => {
+        const t = tenancies.find(x => x.id === c.tenancyId);
+        const u = t ? units.find(x => x.id === t.unitId) : null;
+        const tp = t ? parties.find(x => x.tenancyId === t.id && x.role === 'Primary Tenant') : null;
+        const p = tp ? persons.find(x => x.id === tp.personId) : null;
+
+        // Find allocation & payment
+        const alloc = allocations.find(a => a.chargeId === c.id);
+        const payment = alloc ? payments.find(pay => pay.id === alloc.paymentId) : null;
+
+        const isPaid = c.status === 'Paid';
+        const isOverdue = c.status === 'Overdue';
+
+        return `
+          <tr>
+            <td><code>${c.id}</code></td>
+            <td>
+              <strong>${u ? u.unitNumber : 'Unit'}</strong>
+              <div style="font-size: 11.5px; color: var(--text-muted);">${p ? p.name : 'Unknown Tenant'}</div>
+            </td>
+            <td>${c.period}</td>
+            <td><strong>$${Number(c.amount).toLocaleString()}</strong></td>
+            <td style="color: ${isOverdue ? '#dc2626' : 'var(--text-main)'}; font-weight: ${isOverdue ? '800' : '500'};">${c.dueDate}</td>
+            <td>
+              <span class="badge ${isPaid ? 'badge-paid' : (isOverdue ? 'badge-overdue' : 'badge-warning')}">${c.status}</span>
+            </td>
+            <td>
+              ${payment ? `
+                <div style="font-weight: 700; font-size: 12px; color: #047857;">${payment.method}</div>
+                <div style="font-size: 10.5px; color: var(--text-muted);">${payment.reference} (${payment.paymentDate})</div>
+              ` : `
+                <span style="color: var(--text-muted); font-size: 12px;">No payment recorded</span>
+              `}
+            </td>
+            <td>
+              ${isPaid ? `
+                <button class="btn btn-secondary btn-sm" onclick="viewReceiptModal('${c.id}')">Receipt 🧾</button>
+              ` : `
+                <button class="btn btn-primary btn-sm" onclick="openRecordPaymentModal('${c.tenancyId}', '${p ? p.id : ''}', '${c.id}', ${c.amount})">Pay Now</button>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderDepositLedgers() {
+      const db = dbStore.getDB();
+      const deposits = db.depositLedgers || [];
+      const tenancies = db.tenancies || [];
+      const units = db.units || [];
+      const parties = db.tenancyParties || [];
+      const persons = db.persons || [];
+      const container = document.getElementById('deposits-grid');
+
+      container.innerHTML = deposits.map(dl => {
+        const t = tenancies.find(x => x.id === dl.tenancyId);
+        const u = t ? units.find(x => x.id === t.unitId) : null;
+        const tp = t ? parties.find(x => x.tenancyId === t.id && x.role === 'Primary Tenant') : null;
+        const p = tp ? persons.find(x => x.id === tp.personId) : null;
+
+        const totalHeld = Number(dl.secDepositRec || 0) + Number(dl.utilDepositRec || 0) + Number(dl.keyDepositRec || 0);
+
+        return `
+          <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div>
+                  <strong style="font-size: 16px;">${u ? u.unitNumber : 'Unit'} Deposit Trust</strong>
+                  <div style="font-size: 11.5px; color: var(--text-muted);">Tenant: ${p ? p.name : 'Unknown'}</div>
+                </div>
+                <span class="badge badge-paid">Verified</span>
+              </div>
+
+              <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin: 10px 0; font-size: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+                <div>Security<br><strong>$${dl.secDepositRec}</strong></div>
+                <div>Utility<br><strong>$${dl.utilDepositRec}</strong></div>
+                <div>Keys<br><strong>$${dl.keyDepositRec}</strong></div>
+              </div>
+
+              <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 6px;">TRANSACTION HISTORY</div>
+              <div style="background: white; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 8px; font-size: 11px; max-height: 90px; overflow-y: auto;">
+                ${(dl.transactions || []).map(tr => `
+                  <div style="padding: 2px 0; border-bottom: 1px solid #f8fafc;">
+                    <strong>${tr.date}</strong>: ${tr.type} ($${tr.amount})
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div style="margin-top: 14px; pt-2; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; color: var(--text-muted);">Total: <strong>$${totalHeld}</strong></span>
+              <button class="btn btn-secondary btn-sm" onclick="openDepositTransactionModal('${dl.tenancyId}')">+ Adjustment</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function viewReceiptModal(chargeId) {
+      const db = dbStore.getDB();
+      const c = (db.charges || []).find(x => x.id === chargeId);
+      if (!c) return;
+
+      const t = (db.tenancies || []).find(x => x.id === c.tenancyId);
+      const u = t ? (db.units || []).find(x => x.id === t.unitId) : null;
+      const alloc = (db.allocations || []).find(a => a.chargeId === c.id);
+      const pay = alloc ? (db.payments || []).find(p => p.id === alloc.paymentId) : null;
+      const tp = t ? (db.tenancyParties || []).find(x => x.tenancyId === t.id) : null;
+      const p = tp ? (db.persons || []).find(x => x.id === tp.personId) : null;
+
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = `Official Receipt #${chargeId}`;
+      body.innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 14px;">
+            <div>
+              <h4 style="font-size: 18px; font-weight: 800; color: var(--primary);">NestPad Property Management</h4>
+              <div style="font-size: 11px; color: var(--text-muted);">Rent Payment Confirmation Voucher</div>
+            </div>
+            <div style="text-align: right;">
+              <span class="badge badge-paid" style="font-size: 13px;">PAID IN FULL</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+            <div>
+              <strong>Tenant Name:</strong> ${p ? p.name : 'Valued Resident'}<br>
+              <strong>Unit Number:</strong> ${u ? u.unitNumber : 'Unit'}<br>
+              <strong>Lease Ref:</strong> ${t ? t.id : 'N/A'}
+            </div>
+            <div>
+              <strong>Billing Period:</strong> ${c.period}<br>
+              <strong>Payment Date:</strong> ${pay ? pay.paymentDate : 'Recorded'}<br>
+              <strong>Reference:</strong> ${pay ? pay.reference : 'Standard Alloc'}
+            </div>
+          </div>
+
+          <div style="background: white; border: 1px solid var(--border-color); padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; font-weight: 800; font-size: 16px;">
+            <span>Amount Received:</span>
+            <span style="color: var(--primary);">$${Number(c.amount).toLocaleString()}.00</span>
+          </div>
+
+          <div style="margin-top: 14px; font-size: 11px; color: var(--text-muted); text-align: center;">
+            Official digital receipt generated by NestPad Relational System.
+          </div>
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Close</button>
+        <button class="btn btn-primary" onclick="window.print()">🖨️ Print Receipt</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function openNewChargeModal() {
+      const db = dbStore.getDB();
+      const tenancies = db.tenancies || [];
+      const units = db.units || [];
+
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = '📑 Add Manual Charge to Tenancy';
+      body.innerHTML = `
+        <div class="form-group">
+          <label>Target Tenancy / Unit</label>
+          <select id="modal-newchg-tenancy" class="form-control">
+            ${tenancies.filter(t => t.status !== 'Closed').map(t => {
+              const u = units.find(x => x.id === t.unitId);
+              return `<option value="${t.id}">${u ? u.unitNumber : 'Unit'} (${t.id})</option>`;
+            }).join('')}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Charge Type</label>
+          <select id="modal-newchg-type" class="form-control">
+            <option>Rent</option>
+            <option>Water Bill Re-charge</option>
+            <option>Late Fee Penalty</option>
+            <option>Key Replacement Fee</option>
+            <option>Repairs Chargeback</option>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Amount ($)</label>
+            <input type="number" id="modal-newchg-amount" class="form-control" value="100">
+          </div>
+          <div class="form-group">
+            <label>Due Date</label>
+            <input type="date" id="modal-newchg-due" class="form-control" value="2026-10-25">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Billing Period Label</label>
+          <input type="text" id="modal-newchg-period" class="form-control" value="October 2024">
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitNewCharge()">Create Charge</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function submitNewCharge() {
+      const tenancyId = document.getElementById('modal-newchg-tenancy').value;
+      const type = document.getElementById('modal-newchg-type').value;
+      const amount = Number(document.getElementById('modal-newchg-amount').value) || 0;
+      const due = document.getElementById('modal-newchg-due').value;
+      const period = document.getElementById('modal-newchg-period').value;
+
+      if (amount <= 0) { alert('Please enter a valid amount.'); return; }
+
+      const db = dbStore.getDB();
+      const id = 'chg-' + Date.now();
+      db.charges.unshift({
+        id,
+        tenancyId,
+        chargeType: type,
+        period,
+        amount,
+        dueDate: due,
+        status: 'Due'
+      });
+      dbStore.logAudit('Sarah Jenkins', 'Charge', id, 'CREATED', 'None', `$${amount} (${type})`);
+      localStorage.setItem(dbStore.storageKey, JSON.stringify(db));
+      window.dispatchEvent(new CustomEvent('nestpad_db_updated', { detail: { entityKey: 'charges', action: 'CHARGE_CREATED', timestamp: Date.now() } }));
+      closeGlobalModal();
+      showToast(`Charge of $${amount} created successfully!`, 'success');
+      refreshCurrentPage();
+    }
+
+    function openDepositTransactionModal(defaultTenancyId = '') {
+      const db = dbStore.getDB();
+      const tenancies = db.tenancies || [];
+      const units = db.units || [];
+
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = '🏦 Record Deposit Transaction';
+      body.innerHTML = `
+        <div class="form-group">
+          <label>Tenancy Unit</label>
+          <select id="modal-dep-tenancy" class="form-control">
+            ${tenancies.map(t => {
+              const u = units.find(x => x.id === t.unitId);
+              return `<option value="${t.id}" ${t.id === defaultTenancyId ? 'selected' : ''}>${u ? u.unitNumber : 'Unit'} (${t.id})</option>`;
+            }).join('')}
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Transaction Type</label>
+            <select id="modal-dep-type" class="form-control">
+              <option>Deposit Received</option>
+              <option>Damage Deduction</option>
+              <option>Utility Arrears Deduction</option>
+              <option>Deposit Refunded</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Amount ($)</label>
+            <input type="number" id="modal-dep-amount" class="form-control" value="250">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Reason / Inspection Reference</label>
+          <input type="text" id="modal-dep-details" class="form-control" placeholder="e.g. Move-out wall repaint deduction">
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitDepositTransaction()">Save Transaction</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function submitDepositTransaction() {
+      const tId = document.getElementById('modal-dep-tenancy').value;
+      const type = document.getElementById('modal-dep-type').value;
+      const amount = document.getElementById('modal-dep-amount').value;
+      const details = document.getElementById('modal-dep-details').value;
+
+      if (!amount || Number(amount) <= 0) { alert('Please enter a valid amount.'); return; }
+      logic.recordDepositTransaction(tId, type, amount, details || type);
+      closeGlobalModal();
+      showToast('Deposit transaction recorded successfully!', 'success');
+      refreshCurrentPage();
+    }
+
+    function exportLedgerCSV() {
+      const db = dbStore.getDB();
+      let csv = "ChargeID,TenancyID,Type,Period,Amount,DueDate,Status\n";
+      (db.charges || []).forEach(c => {
+        csv += `"${c.id}","${c.tenancyId}","${c.chargeType}","${c.period}",${c.amount},"${c.dueDate}","${c.status}"\n`;
+      });
+      const link = document.createElement("a");
+      link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+      link.download = `NestPad_Rent_Ledger_${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+    }
+  </script>
+</body>
+</html>

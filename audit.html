@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NestPad — Audit Trail & Database Management</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="app-container">
+    <!-- Sidebar Container -->
+    <div id="sidebar-container"></div>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+      <!-- Top Header Container -->
+      <div id="header-container"></div>
+
+      <div class="page-body">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">
+              SECURITY, COMPLIANCE & DATA INTEGRITY
+            </div>
+            <h2 style="font-size: 28px; font-weight: 800; margin-top: 4px;">Audit Trail & System Compliance</h2>
+            <p style="color: var(--text-muted);">Inspect immutable records of all entity mutations, payments, maintenance logs, and state changes.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="exportAuditCSV()">📥 Export Audit CSV</button>
+          </div>
+        </div>
+
+        <!-- 4 Stat Cards for Database & Compliance -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Audit Records</span>
+            <div id="stat-audit-count" style="font-size: 32px; font-weight: 800; margin: 8px 0;">0</div>
+            <span class="badge badge-paid">● Immutable Ledger</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Active Database Tables</span>
+            <div style="font-size: 32px; font-weight: 800; margin: 8px 0;">16</div>
+            <span class="badge badge-info">Relational Schema Truth</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Database Status</span>
+            <div id="stat-sync-status" style="font-size: 22px; font-weight: 800; color: var(--primary); margin: 8px 0; line-height: 1.4;">MySQL Live</div>
+            <span class="badge badge-paid">Direct Instant Save</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Storage Engine</span>
+            <div style="font-size: 22px; font-weight: 800; margin: 8px 0; line-height: 1.4;">MySQL Database</div>
+            <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 11px;" onclick="dbStore.exportJSON()">Export JSON</button>
+          </div>
+        </div>
+
+        <!-- Database Tables Schema Browser -->
+        <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 24px; margin-bottom: 28px; box-shadow: var(--shadow-sm);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 17px; font-weight: 800;">🗃️ Database Table Row Counts</h3>
+            <span class="badge badge-paid">Live Store Truth</span>
+          </div>
+          <div id="db-tables-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Filter Bar for Audit Log -->
+        <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; box-shadow: var(--shadow-sm);">
+          <div style="display: flex; gap: 12px; align-items: center; flex: 1;">
+            <input type="text" id="audit-search" class="form-control" style="max-width: 280px;" placeholder="Search user, action, entity..." oninput="renderAuditTable()">
+            <select id="audit-entity-filter" class="form-control" style="max-width: 200px;" onchange="renderAuditTable()">
+              <option value="all">All Entities</option>
+              <option value="Charge">Charges</option>
+              <option value="MaintenanceRequest">Maintenance</option>
+              <option value="Tenancy">Tenancies</option>
+              <option value="Unit">Units</option>
+              <option value="Building">Buildings</option>
+              <option value="Task">Tasks</option>
+              <option value="DepositLedger">Deposit Ledgers</option>
+            </select>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="clearAuditLogFilter()">Reset Filter</button>
+        </div>
+
+        <!-- Immutable Audit Trail Table -->
+        <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-sm);">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>OPERATOR</th>
+                <th>ENTITY</th>
+                <th>ENTITY ID</th>
+                <th>ACTION</th>
+                <th>PREVIOUS VALUE</th>
+                <th>NEW VALUE</th>
+                <th>TIMESTAMP</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/shared.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSharedLayout('audit');
+      refreshCurrentPage();
+    });
+
+    function refreshCurrentPage() {
+      renderSharedLayout('audit');
+      renderAuditStats();
+      renderAuditTable();
+    }
+
+    function renderAuditStats() {
+      const stats = dbStore.getStats();
+      document.getElementById('stat-audit-count').innerText = stats.auditTrail;
+
+      const statusElem = document.getElementById('stat-sync-status');
+      if (statusElem) statusElem.innerText = '🗄️ MySQL Live';
+
+      const grid = document.getElementById('db-tables-grid');
+      const tableLabels = [
+        { key: 'buildings', label: 'Buildings / Complexes', icon: '🏢' },
+        { key: 'units', label: 'Units & Inventory', icon: '🚪' },
+        { key: 'tenancies', label: 'Lease Agreements', icon: '📑' },
+        { key: 'persons', label: 'Person Master', icon: '👤' },
+        { key: 'charges', label: 'Financial Charges', icon: '💵' },
+        { key: 'payments', label: 'Payments Logged', icon: '💳' },
+        { key: 'maintenanceRequests', label: 'Maintenance Requests', icon: '🔧' },
+        { key: 'workOrders', label: 'Vendor Work Orders', icon: '👷' },
+        { key: 'vendors', label: 'Vendors Master', icon: '🛠️' },
+        { key: 'depositLedgers', label: 'Deposit Ledgers', icon: '🏦' },
+        { key: 'documents', label: 'Vault Documents', icon: '📂' },
+        { key: 'tasks', label: 'Tasks & Notebook', icon: '📝' }
+      ];
+
+      grid.innerHTML = tableLabels.map(t => {
+        const count = stats[t.key] || (dbStore.get(t.key) || []).length;
+        return `
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+              <span>${t.icon}</span> ${t.label}
+            </div>
+            <div style="font-size: 20px; font-weight: 800; margin-top: 4px;">${count} <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">rows</span></div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAuditTable() {
+      const db = dbStore.getDB();
+      const logs = db.auditTrail || [];
+      const query = (document.getElementById('audit-search').value || '').toLowerCase();
+      const entity = document.getElementById('audit-entity-filter').value;
+      const tbody = document.getElementById('audit-table-body');
+
+      const filtered = logs.filter(a => {
+        const matchEntity = entity === 'all' || a.entity === entity;
+        const matchQuery = !query ||
+          (a.user && a.user.toLowerCase().includes(query)) ||
+          (a.action && a.action.toLowerCase().includes(query)) ||
+          (a.entity && a.entity.toLowerCase().includes(query)) ||
+          (a.entityId && a.entityId.toLowerCase().includes(query)) ||
+          (a.newValue && a.newValue.toLowerCase().includes(query));
+        return matchEntity && matchQuery;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">
+              No audit entries match the current filter.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(a => `
+        <tr>
+          <td><code>${a.id}</code></td>
+          <td><strong>${a.user}</strong></td>
+          <td><span class="badge badge-info">${a.entity}</span></td>
+          <td><code>${a.entityId}</code></td>
+          <td><span class="badge badge-warning">${a.action}</span></td>
+          <td style="color: #dc2626; font-size: 12px;">${a.oldValue}</td>
+          <td style="color: #047857; font-weight: 700; font-size: 12px;">${a.newValue}</td>
+          <td style="color: var(--text-muted); font-size: 11px;">${a.timestamp}</td>
+        </tr>
+      `).join('');
+    }
+
+    function clearAuditLogFilter() {
+      document.getElementById('audit-search').value = '';
+      document.getElementById('audit-entity-filter').value = 'all';
+      renderAuditTable();
+    }
+
+    function exportAuditCSV() {
+      const db = dbStore.getDB();
+      const logs = db.auditTrail || [];
+      let csv = "AuditID,User,Entity,EntityID,Action,OldValue,NewValue,Timestamp\n";
+      logs.forEach(a => {
+        csv += `"${a.id}","${a.user}","${a.entity}","${a.entityId}","${a.action}","${(a.oldValue||'').replace(/"/g, '""')}","${(a.newValue||'').replace(/"/g, '""')}","${a.timestamp}"\n`;
+      });
+      const link = document.createElement("a");
+      link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+      link.download = `NestPad_Audit_Trail_${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+    }
+  </script>
+</body>
+</html>

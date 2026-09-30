@@ -1,0 +1,18 @@
+{
+  "activeDatabase": "mysql",
+  "comment": "Set activeDatabase to 'mysql' or 'sqlite'",
+  "sqlite": {
+    "file": "nestpad.db",
+    "journalMode": "WAL"
+  },
+  "mysql": {
+    "host": "localhost",
+    "port": 3306,
+    "user": "root",
+    "password": "hosam123",
+    "database": "nestpad_db",
+    "waitForConnections": true,
+    "connectionLimit": 10,
+    "queueLimit": 0
+  }
+}

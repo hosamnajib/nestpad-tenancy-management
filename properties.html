@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NestPad — Properties & Units</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main id="main-content" class="main-content">
+      <div id="header-container"></div>
+
+      <div class="page-body">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">
+              PORTFOLIO ASSET INVENTORY
+            </div>
+            <h2 style="font-size: 28px; font-weight: 800; margin-top: 4px;">Properties, Units & Building Registers</h2>
+            <p style="color: var(--text-muted);">Normalized data model: Master Buildings contain Units, with separate Owner entities, Asset tracking, and Lockbox security.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="openAddBuildingModal()">+ Add Building Complex</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddUnitModal()">+ Add New Unit</button>
+          </div>
+        </div>
+
+        <!-- Metrics Bar -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Units</span>
+            <div id="prop-total-units" style="font-size: 32px; font-weight: 800; margin: 8px 0;">0</div>
+            <span id="prop-occupancy-badge" class="badge badge-paid">● 0% Occupancy</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Occupied Units</span>
+            <div id="prop-occupied-count" style="font-size: 32px; font-weight: 800; color: var(--primary); margin: 8px 0;">0</div>
+            <span class="badge badge-paid">Income Producing</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Vacant Units</span>
+            <div id="prop-vacant-count" style="font-size: 32px; font-weight: 800; color: #dc2626; margin: 8px 0;">0</div>
+            <span class="badge badge-warning">Available for Lease</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Property Complexes</span>
+            <div id="prop-buildings-count" style="font-size: 32px; font-weight: 800; margin: 8px 0;">0</div>
+            <span class="badge badge-info">Multi-Family Estates</span>
+          </div>
+        </div>
+
+        <!-- Master Buildings Overview -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 28px 0 16px 0;">
+          <h3 style="font-size: 17px; font-weight: 800;">🏢 Master Property Complexes</h3>
+        </div>
+        <div id="buildings-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 32px;">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Filter Bar -->
+        <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; box-shadow: var(--shadow-sm); flex-wrap: wrap;">
+          <div style="display: flex; gap: 12px; align-items: center; flex: 1;">
+            <input type="text" id="unit-search-input" class="form-control" style="max-width: 260px;" placeholder="Search unit, floor, tenant..." oninput="renderUnitsGrid()">
+            
+            <select id="unit-building-filter" class="form-control" style="max-width: 220px;" onchange="renderUnitsGrid()">
+              <option value="all">All Buildings</option>
+              <!-- Populated by JS -->
+            </select>
+
+            <select id="unit-status-filter" class="form-control" style="max-width: 160px;" onchange="renderUnitsGrid()">
+              <option value="all">All Statuses</option>
+              <option value="Occupied">Occupied</option>
+              <option value="Vacant">Vacant</option>
+            </select>
+          </div>
+
+          <div style="font-size: 12px; font-weight: 700; color: var(--text-muted);" id="filtered-units-stat">
+            Showing all units
+          </div>
+        </div>
+
+        <!-- Units Grid -->
+        <div id="units-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+          <!-- Units populated dynamically -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/shared.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSharedLayout('properties');
+      refreshCurrentPage();
+    });
+
+    function refreshCurrentPage() {
+      renderSharedLayout('properties');
+      const m = logic.getMetrics();
+      const db = dbStore.getDB();
+
+      document.getElementById('prop-total-units').innerText = m.totalUnits;
+      document.getElementById('prop-occupied-count').innerText = m.occupiedUnits;
+      document.getElementById('prop-vacant-count').innerText = m.vacantUnits;
+      document.getElementById('prop-occupancy-badge').innerText = `● ${m.occupancyRate}% Occupancy`;
+      document.getElementById('prop-buildings-count').innerText = (db.buildings || []).length;
+
+      // Populate Building Filter dropdown
+      const bFilter = document.getElementById('unit-building-filter');
+      const curFilterVal = bFilter.value;
+      bFilter.innerHTML = '<option value="all">All Buildings</option>' + (db.buildings || []).map(b => `
+        <option value="${b.id}" ${b.id === curFilterVal ? 'selected' : ''}>${b.name}</option>
+      `).join('');
+
+      renderBuildingsOverview();
+      renderUnitsGrid();
+    }
+
+    function renderBuildingsOverview() {
+      const db = dbStore.getDB();
+      const buildings = db.buildings || [];
+      const units = db.units || [];
+      const container = document.getElementById('buildings-grid');
+
+      container.innerHTML = buildings.map(b => {
+        const bUnits = units.filter(u => u.buildingId === b.id);
+        const occupiedCount = bUnits.filter(u => u.status === 'Occupied').length;
+        const totalRent = bUnits.reduce((sum, u) => sum + (Number(u.targetRent) || 0), 0);
+
+        return `
+          <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <h4 style="font-size: 16px; font-weight: 800;">${b.name}</h4>
+                <span class="badge badge-info">${bUnits.length} Units</span>
+              </div>
+              <p style="font-size: 12px; color: var(--text-muted); margin: 6px 0 12px 0;">📍 ${b.address}, ${b.city} (${b.postcode})</p>
+              
+              <div style="background: #f8fafc; padding: 10px; border-radius: 8px; font-size: 11.5px; margin-bottom: 12px;">
+                <div>🏢 <strong>Mgmt:</strong> ${b.managementOffice}</div>
+                <div>💰 <strong>Est Monthly Rent Roll:</strong> $${totalRent.toLocaleString()}</div>
+                <div>📊 <strong>Occupancy:</strong> ${occupiedCount} / ${bUnits.length} occupied</div>
+              </div>
+
+              <div style="font-size: 11px; color: var(--text-muted);">
+                <strong>Facilities:</strong> ${(b.facilities || []).join(', ')}
+              </div>
+            </div>
+
+            <div style="margin-top: 16px; pt-2; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end;">
+              <button class="btn btn-secondary btn-sm" onclick="filterByBuilding('${b.id}')">View Units ↗</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterByBuilding(bId) {
+      document.getElementById('unit-building-filter').value = bId;
+      renderUnitsGrid();
+    }
+
+    function renderUnitsGrid() {
+      const db = dbStore.getDB();
+      const units = db.units || [];
+      const buildings = db.buildings || [];
+      const search = (document.getElementById('unit-search-input').value || '').toLowerCase();
+      const buildingFilter = document.getElementById('unit-building-filter').value;
+      const statusFilter = document.getElementById('unit-status-filter').value;
+      const container = document.getElementById('units-grid');
+
+      const filtered = units.filter(u => {
+        const b = buildings.find(x => x.id === u.buildingId) || {};
+        const matchBuilding = buildingFilter === 'all' || u.buildingId === buildingFilter;
+        const matchStatus = statusFilter === 'all' || u.status === statusFilter;
+        const matchSearch = !search ||
+          u.unitNumber.toLowerCase().includes(search) ||
+          u.floor.toLowerCase().includes(search) ||
+          (b.name && b.name.toLowerCase().includes(search));
+        return matchBuilding && matchStatus && matchSearch;
+      });
+
+      document.getElementById('filtered-units-stat').innerText = `Showing ${filtered.length} of ${units.length} units`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column: span 3; text-align: center; padding: 48px; background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); color: var(--text-muted);">
+            No units match the selected filters.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(u => {
+        const b = buildings.find(x => x.id === u.buildingId) || {};
+        const ownership = (db.ownerships || []).find(os => os.unitId === u.id);
+        const owner = ownership ? (db.owners || []).find(o => o.id === ownership.ownerId) : (db.owners ? db.owners[0] : null);
+        const tenancy = (db.tenancies || []).find(t => t.unitId === u.id && t.status !== 'Closed');
+        const primaryParty = tenancy ? (db.tenancyParties || []).find(tp => tp.tenancyId === tenancy.id && tp.role === 'Primary Tenant') : null;
+        const tenantPerson = primaryParty ? (db.persons || []).find(p => p.id === primaryParty.personId) : null;
+        const assets = (db.unitAssets || []).filter(a => a.unitId === u.id);
+        const keys = (db.accessControl || []).filter(k => k.unitId === u.id);
+
+        const isOccupied = u.status === 'Occupied';
+
+        return `
+          <div class="unit-card" style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <strong style="font-size: 19px;">${u.unitNumber}</strong>
+                <div style="font-size: 12px; color: var(--text-muted);">${b.name || 'Building'} • ${u.floor}</div>
+              </div>
+              <span class="badge ${isOccupied ? 'badge-paid' : 'badge-warning'}">${u.status}</span>
+            </div>
+
+            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 12px; display: flex; flex-direction: column; gap: 4px;">
+              <div><strong>Owner:</strong> ${owner ? owner.legalName : 'Property Holdings'} (100%)</div>
+              <div><strong>Rent Target:</strong> $${Number(u.targetRent).toLocaleString()}/mo</div>
+              <div><strong>Current Tenant:</strong> ${tenantPerson ? tenantPerson.name : '(None - Vacant)'}</div>
+              <div><strong>Meters:</strong> ${u.electricityAcc} | ${u.waterAcc}</div>
+              <div><strong>Lockbox:</strong> Code #${u.lockboxCode}</div>
+            </div>
+
+            <div style="font-size: 12px; color: var(--text-muted);">
+              🛏️ ${u.bedrooms} Bed • 🚿 ${u.bathrooms} Bath • 🅿️ ${u.parkingBays}
+            </div>
+
+            <!-- Assets & Keys Summary -->
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; font-size: 11.5px;">
+              <div style="font-weight: 800; color: var(--text-muted); margin-bottom: 4px;">REGISTERED ASSETS (${assets.length})</div>
+              ${assets.length > 0 ? assets.map(a => `
+                <div style="color: var(--text-main); font-size: 11px;">• ${a.category} (${a.brand}) - <span style="color: var(--primary);">${a.condition}</span></div>
+              `).join('') : '<div style="color: var(--text-muted); font-size: 11px;">No assets registered yet.</div>'}
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
+              <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="openAssetModal('${u.id}')">+ Add Asset</button>
+              <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="openUnitEditModal('${u.id}')">Manage Unit</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openAddBuildingModal() {
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = '🏢 Add Master Property Complex';
+      body.innerHTML = `
+        <div class="form-group">
+          <label>Property Name</label>
+          <input type="text" id="modal-b-name" class="form-control" placeholder="e.g. Parkview Residences">
+        </div>
+        <div class="form-group">
+          <label>Street Address</label>
+          <input type="text" id="modal-b-addr" class="form-control" placeholder="e.g. 12 Jalan Kiara 3">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>City</label>
+            <input type="text" id="modal-b-city" class="form-control" value="Kuala Lumpur">
+          </div>
+          <div class="form-group">
+            <label>Postcode</label>
+            <input type="text" id="modal-b-postcode" class="form-control" value="50480">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Management Office / Contact</label>
+          <input type="text" id="modal-b-office" class="form-control" placeholder="e.g. JMB Office Ground Floor">
+        </div>
+        <div class="form-group">
+          <label>Facilities (comma-separated)</label>
+          <input type="text" id="modal-b-facilities" class="form-control" value="Swimming Pool, Gym, 24h Security, Covered Parking">
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAddBuilding()">Save Building</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function submitAddBuilding() {
+      const name = document.getElementById('modal-b-name').value;
+      const addr = document.getElementById('modal-b-addr').value;
+      const city = document.getElementById('modal-b-city').value;
+      const pc = document.getElementById('modal-b-postcode').value;
+      const office = document.getElementById('modal-b-office').value;
+      const fac = document.getElementById('modal-b-facilities').value;
+
+      if (!name || !name.trim()) { alert('Please enter property name.'); return; }
+      logic.addBuilding(name.trim(), addr.trim(), city.trim(), pc.trim(), office.trim(), fac);
+      closeGlobalModal();
+      showToast(`Building "${name.trim()}" added to portfolio!`, 'success');
+      refreshCurrentPage();
+    }
+
+    function openAssetModal(unitId) {
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = '🛋️ Add Unit Asset & Appliance';
+      body.innerHTML = `
+        <div class="form-group">
+          <label>Asset Category</label>
+          <select id="modal-asset-cat" class="form-control">
+            <option>Air Conditioner</option>
+            <option>Refrigerator</option>
+            <option>Washing Machine</option>
+            <option>Water Heater</option>
+            <option>Microwave Oven</option>
+            <option>Living Room Sofa</option>
+            <option>Dining Set</option>
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Brand & Model</label>
+            <input type="text" id="modal-asset-brand" class="form-control" placeholder="e.g. Daikin 1.5HP Inverter">
+          </div>
+          <div class="form-group">
+            <label>Serial / Tag Number</label>
+            <input type="text" id="modal-asset-serial" class="form-control" placeholder="e.g. DK-899120">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Condition</label>
+          <select id="modal-asset-cond" class="form-control">
+            <option>Brand New</option>
+            <option selected>Good</option>
+            <option>Minor Defect</option>
+            <option>Needs Service</option>
+          </select>
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAddAsset('${unitId}')">Save Asset</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function submitAddAsset(unitId) {
+      const cat = document.getElementById('modal-asset-cat').value;
+      const brand = document.getElementById('modal-asset-brand').value;
+      const serial = document.getElementById('modal-asset-serial').value;
+      const cond = document.getElementById('modal-asset-cond').value;
+
+      const db = dbStore.getDB();
+      db.unitAssets = db.unitAssets || [];
+      db.unitAssets.push({
+        id: 'ast-' + Date.now(),
+        unitId,
+        category: cat,
+        brand: brand || 'Standard',
+        serialNo: serial || ('TAG-' + Math.floor(1000 + Math.random() * 9000)),
+        condition: cond,
+        warrantyExpiry: '2027-12-31'
+      });
+      localStorage.setItem(dbStore.storageKey, JSON.stringify(db));
+      window.dispatchEvent(new CustomEvent('nestpad_db_updated', { detail: { entityKey: 'unitAssets', action: 'ASSET_ADDED', timestamp: Date.now() } }));
+      closeGlobalModal();
+      showToast('Asset added to unit inventory!', 'success');
+      refreshCurrentPage();
+    }
+
+    function openUnitEditModal(unitId) {
+      const db = dbStore.getDB();
+      const u = (db.units || []).find(x => x.id === unitId);
+      if (!u) return;
+
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = `Manage ${u.unitNumber}`;
+      body.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Occupancy Status</label>
+            <select id="edit-unit-status" class="form-control">
+              <option value="Occupied" ${u.status === 'Occupied' ? 'selected' : ''}>Occupied</option>
+              <option value="Vacant" ${u.status === 'Vacant' ? 'selected' : ''}>Vacant</option>
+              <option value="Under Turnover" ${u.status === 'Under Turnover' ? 'selected' : ''}>Under Turnover</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Target Rent ($/mo)</label>
+            <input type="number" id="edit-unit-rent" class="form-control" value="${u.targetRent}">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Lockbox Security Code</label>
+            <input type="text" id="edit-unit-lockbox" class="form-control" value="${u.lockboxCode}">
+          </div>
+          <div class="form-group">
+            <label>Parking Bays</label>
+            <input type="text" id="edit-unit-parking" class="form-control" value="${u.parkingBays}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Electricity Meter Account</label>
+          <input type="text" id="edit-unit-elec" class="form-control" value="${u.electricityAcc}">
+        </div>
+
+        <div class="form-group">
+          <label>Water Meter Account</label>
+          <input type="text" id="edit-unit-water" class="form-control" value="${u.waterAcc}">
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitEditUnit('${u.id}')">Save Changes</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function submitEditUnit(unitId) {
+      const status = document.getElementById('edit-unit-status').value;
+      const rent = Number(document.getElementById('edit-unit-rent').value) || 1800;
+      const lockbox = document.getElementById('edit-unit-lockbox').value;
+      const parking = document.getElementById('edit-unit-parking').value;
+      const elec = document.getElementById('edit-unit-elec').value;
+      const water = document.getElementById('edit-unit-water').value;
+
+      dbStore.updateItem('units', unitId, {
+        status,
+        targetRent: rent,
+        lockboxCode: lockbox,
+        parkingBays: parking,
+        electricityAcc: elec,
+        waterAcc: water
+      });
+
+      closeGlobalModal();
+      showToast('Unit settings updated successfully!', 'success');
+      refreshCurrentPage();
+    }
+  </script>
+</body>
+</html>

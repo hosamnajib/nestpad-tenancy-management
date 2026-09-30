@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NestPad — Portfolio Dashboard</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="app-container">
+    <!-- Shared Sidebar Navigation -->
+    <div id="sidebar-container"></div>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+      <!-- Shared Top Header -->
+      <div id="header-container"></div>
+
+      <div class="page-body">
+        <!-- Hero Banner -->
+        <div style="margin-bottom: 24px;">
+          <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">
+            ● Live Portfolio Pulse
+          </div>
+          <h2 style="font-size: 28px; font-weight: 800; margin-top: 4px;">Good day, Sarah 👋</h2>
+          <p style="color: var(--text-muted);">Real-time operations status computed directly from your unified relational database truth.</p>
+        </div>
+
+        <!-- 4 Calculated Metric Cards -->
+        <div class="stats-grid" id="stats-grid-container">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Two-Column Layout -->
+        <div style="display: grid; grid-template-columns: 1fr 360px; gap: 28px;">
+          <!-- Left Column: Action Items & Expirations -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="font-size: 17px; font-weight: 800;">⚠️ Urgent Action Items</h3>
+              <span id="action-items-count" class="badge badge-warning">2 Active Issues</span>
+            </div>
+
+            <div id="urgent-actions-container">
+              <!-- Dynamically populated -->
+            </div>
+
+            <!-- Upcoming Expirations -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 28px 0 16px 0;">
+              <h3 style="font-size: 17px; font-weight: 800;">⌛ Leases Expiring (Next 60 Days)</h3>
+              <a href="tenants.html" class="btn btn-secondary btn-sm">View All Leases ↗</a>
+            </div>
+
+            <div id="expirations-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Right Column: Manager Notebook & Live Events -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Notebook Panel -->
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 24px; box-shadow: var(--shadow-sm);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h4 style="font-size: 16px; font-weight: 800;">📋 Manager's Notebook</h4>
+                <button class="btn btn-secondary btn-sm" onclick="openAddNoteModal()">+ Add</button>
+              </div>
+
+              <div id="todos-container" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Tasks populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Next Scheduled Calendar Events -->
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 24px; box-shadow: var(--shadow-sm);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h4 style="font-size: 16px; font-weight: 800;">📅 Upcoming Schedule</h4>
+                <a href="calendar.html" class="btn btn-secondary btn-sm">Calendar ↗</a>
+              </div>
+
+              <div id="dashboard-events-container" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Events populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Recent Audit Trail Snippet -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong style="font-size: 12px; color: var(--primary);">🛡️ Recent System Audit</strong>
+                <a href="audit.html" style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-decoration: none;">View Log ↗</a>
+              </div>
+              <div id="recent-audit-text" style="font-size: 11.5px; color: var(--text-muted); margin-top: 6px;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/shared.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSharedLayout('dashboard');
+      refreshCurrentPage();
+    });
+
+    function refreshCurrentPage() {
+      renderSharedLayout('dashboard');
+      const m = logic.getMetrics();
+      const db = dbStore.getDB();
+
+      // 1. Metric Cards
+      document.getElementById('stats-grid-container').innerHTML = `
+        <div class="stat-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Occupancy Rate</span>
+            <span style="font-size: 18px;">🏢</span>
+          </div>
+          <div style="font-size: 32px; font-weight: 800; margin: 8px 0;">${m.occupancyRate}%</div>
+          <span class="badge badge-paid">● ${m.occupiedUnits} Occupied • ${m.vacantUnits} Vacant</span>
+        </div>
+
+        <div class="stat-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Overdue Rent</span>
+            <span style="font-size: 18px;">⚠️</span>
+          </div>
+          <div style="font-size: 32px; font-weight: 800; color: #dc2626; margin: 8px 0;">$${m.overdueAmount.toLocaleString()}</div>
+          <span class="badge badge-overdue">${m.overdueCount} Overdue Charges</span>
+        </div>
+
+        <div class="stat-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Active Maintenance</span>
+            <span style="font-size: 18px;">🔧</span>
+          </div>
+          <div style="font-size: 32px; font-weight: 800; margin: 8px 0;">${m.openMaint} <span style="font-size: 16px; color: var(--text-muted);">Open</span></div>
+          <span class="badge ${m.urgentMaint > 0 ? 'badge-overdue' : 'badge-paid'}">${m.urgentMaint} Urgent Attention</span>
+        </div>
+
+        <div class="stat-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Leases Expiring 60d</span>
+            <span style="font-size: 18px;">⌛</span>
+          </div>
+          <div style="font-size: 32px; font-weight: 800; margin: 8px 0;">${m.upcomingExpirations.length}</div>
+          <span class="badge badge-warning">Next in ${m.upcomingExpirations[0]?.daysLeft || 0} days</span>
+        </div>
+      `;
+
+      // 2. Urgent Action Items
+      const overdueCharges = (db.charges || []).filter(c => c.status === 'Overdue');
+      const urgentMaint = (db.maintenanceRequests || []).filter(r => r.urgency === 'URGENT' && r.status !== 'Resolved');
+      const totalUrgent = overdueCharges.length + urgentMaint.length;
+      document.getElementById('action-items-count').innerText = `${totalUrgent} Active Issues`;
+
+      let actionHTML = '';
+
+      if (totalUrgent === 0) {
+        actionHTML = `
+          <div style="background: #ecfdf5; border: 1px solid var(--primary-border); border-radius: var(--radius-lg); padding: 24px; text-align: center; color: var(--primary);">
+            <div style="font-size: 28px; margin-bottom: 6px;">🎉</div>
+            <strong>All portfolio operations are fully caught up!</strong>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Zero overdue rent charges and zero urgent maintenance requests.</p>
+          </div>
+        `;
+      } else {
+        // Overdue Rent Cards
+        overdueCharges.forEach(c => {
+          const t = (db.tenancies || []).find(x => x.id === c.tenancyId);
+          const u = t ? (db.units || []).find(x => x.id === t.unitId) : null;
+          const tp = (db.tenancyParties || []).find(x => x.tenancyId === c.tenancyId && x.role === 'Primary Tenant');
+          const p = tp ? (db.persons || []).find(x => x.id === tp.personId) : null;
+
+          actionHTML += `
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 14px; box-shadow: var(--shadow-sm);">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong style="font-size: 16px;">${u ? u.unitNumber : 'Unit'} • ${p ? p.name : 'Tenant'}</strong>
+                  <span class="badge badge-overdue" style="margin-left: 8px;">Overdue Rent</span>
+                </div>
+                <strong style="color: #dc2626; font-size: 18px;">$${c.amount.toLocaleString()}</strong>
+              </div>
+              <p style="font-size: 13px; color: var(--text-muted); margin: 8px 0 14px 0;">${c.period} charge past due date (${c.dueDate}). Immediate follow-up required.</p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary btn-sm" onclick="alert('Calling ${p ? p.name : 'Tenant'} at ${p ? p.phone : 'number on file'}...')">📞 Call Tenant</button>
+                <button class="btn btn-secondary btn-sm" onclick="logCommunication('${c.tenancyId}', '${p ? p.id : ''}', 'Sent overdue rent text reminder ($${c.amount})')">💬 Send Text Ping</button>
+                <button class="btn btn-primary btn-sm" onclick="openRecordPaymentModal('${c.tenancyId}', '${p ? p.id : ''}', '${c.id}', ${c.amount})">Mark as Paid ✔️</button>
+              </div>
+            </div>
+          `;
+        });
+
+        // Urgent Repairs Cards
+        urgentMaint.forEach(maint => {
+          const u = (db.units || []).find(x => x.id === maint.unitId);
+          const b = u ? (db.buildings || []).find(x => x.id === u.buildingId) : null;
+
+          actionHTML += `
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 14px; box-shadow: var(--shadow-sm);">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong style="font-size: 16px;">${u ? u.unitNumber : 'Unit'} • ${b ? b.name : 'Property'}</strong>
+                  <span class="badge badge-overdue" style="margin-left: 8px;">URGENT REPAIR</span>
+                </div>
+                <span class="badge badge-warning">${maint.status}</span>
+              </div>
+              <p style="font-size: 13px; color: var(--text-muted); margin: 8px 0 14px 0;"><strong>${maint.issue}:</strong> ${maint.description}</p>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; color: var(--text-muted);">Reported: ${maint.dateReported}</span>
+                <a href="maintenance.html" class="btn btn-secondary btn-sm">Open in Maintenance ↗</a>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      document.getElementById('urgent-actions-container').innerHTML = actionHTML;
+
+      // 3. Upcoming Expirations
+      const expContainer = document.getElementById('expirations-container');
+      if (m.upcomingExpirations.length === 0) {
+        expContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No leases expiring within the next 60 days.</div>';
+      } else {
+        expContainer.innerHTML = m.upcomingExpirations.map(exp => `
+          <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm);">
+            <div style="display: flex; gap: 16px; align-items: center;">
+              <div style="width: 48px; height: 48px; border-radius: 8px; background: #ecfdf5; color: #047857; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800;">
+                <span style="font-size: 18px; line-height: 1;">${exp.daysLeft}</span>
+                <span style="font-size: 9px;">DAYS</span>
+              </div>
+              <div>
+                <strong>${exp.unitNumber} — ${exp.tenantName}</strong>
+                <div style="font-size: 12px; color: var(--text-muted);">Lease ends: ${exp.endDate} • Rent: $${exp.rentAmount}/mo</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-secondary btn-sm" onclick="renewLeasePrompt('${exp.id}')">Renew</button>
+              <button class="btn btn-secondary btn-sm" onclick="moveOutPrompt('${exp.id}')">Move-Out</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // 4. Notebook Tasks
+      const todosContainer = document.getElementById('todos-container');
+      const tasks = db.tasks || [];
+      if (tasks.length === 0) {
+        todosContainer.innerHTML = '<div style="font-size: 12px; color: var(--text-muted);">No active tasks in notebook.</div>';
+      } else {
+        todosContainer.innerHTML = tasks.slice(0, 5).map(t => `
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
+            <div style="display: flex; align-items: flex-start; gap: 10px;">
+              <input type="checkbox" ${t.status === 'Completed' ? 'checked' : ''} onchange="logic.toggleTask('${t.id}'); refreshCurrentPage();" style="margin-top: 3px; accent-color: var(--primary);">
+              <div>
+                <div style="font-size: 13px; font-weight: 600; ${t.status === 'Completed' ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${t.title}</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Due: ${t.dueDate}</div>
+              </div>
+            </div>
+            <button onclick="logic.deleteTask('${t.id}'); refreshCurrentPage();" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px;" title="Delete task">&times;</button>
+          </div>
+        `).join('');
+      }
+
+      // 5. Calendar Events
+      const eventsContainer = document.getElementById('dashboard-events-container');
+      const calEvents = logic.getAggregatedCalendarEvents().slice(0, 4);
+      eventsContainer.innerHTML = calEvents.map(e => `
+        <div style="background: #f8fafc; border-left: 3px solid var(--primary); padding: 10px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 700; font-size: 13px;">${e.title}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">${e.time || 'All Day'} • ${e.type}</div>
+          </div>
+          <span style="font-size: 11px; font-weight: 800; color: var(--primary); background: white; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color);">${e.date.slice(5)}</span>
+        </div>
+      `).join('');
+
+      // 6. Recent Audit Snippet
+      const latestAudit = (db.auditTrail || [])[0];
+      document.getElementById('recent-audit-text').innerText = latestAudit
+        ? `${latestAudit.user} performed ${latestAudit.action} on ${latestAudit.entity} (${latestAudit.timestamp})`
+        : 'System initialized with clean specification truth.';
+    }
+
+    function logCommunication(tenancyId, personId, msg) {
+      const db = dbStore.getDB();
+      db.communications = db.communications || [];
+      db.communications.unshift({
+        id: 'comm-' + Date.now(),
+        tenancyId,
+        senderPersonId: personId || 'p-101',
+        recipient: 'Tenant',
+        channel: 'SMS',
+        timestamp: new Date().toLocaleTimeString(),
+        subject: 'Rent Notice',
+        message: msg
+      });
+      localStorage.setItem(dbStore.storageKey, JSON.stringify(db));
+      window.dispatchEvent(new CustomEvent('nestpad_db_updated', { detail: { entityKey: 'communications', action: 'SMS_SENT', timestamp: Date.now() } }));
+      showToast('SMS Reminder logged to communications timeline!', 'success');
+    }
+
+    function renewLeasePrompt(tenancyId) {
+      const newEnd = prompt('Enter new lease expiration date (YYYY-MM-DD):', '2026-11-30');
+      if (newEnd) {
+        const newRent = prompt('Enter renewal rent amount ($/mo):', '1750');
+        logic.renewTenancy(tenancyId, newEnd, newRent);
+        showToast('Lease renewed successfully!', 'success');
+        refreshCurrentPage();
+      }
+    }
+
+    function moveOutPrompt(tenancyId) {
+      if (confirm('Initiate formal move-out workflow? This will mark the lease closed, change the unit status to Vacant, and generate a move-out inspection task.')) {
+        logic.terminateTenancy(tenancyId);
+        showToast('Move-out completed! Unit status set to Vacant.', 'success');
+        refreshCurrentPage();
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NestPad — Documents & Digital Vault</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main id="main-content" class="main-content">
+      <div id="header-container"></div>
+
+      <div class="page-body">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">
+              SECURE EVIDENCE & DOCUMENT VAULT
+            </div>
+            <h2 style="font-size: 28px; font-weight: 800; margin-top: 4px;">Digital Vault & Verification Files</h2>
+            <p style="color: var(--text-muted);">Encrypted digital storage linking signed tenancy contracts, move-in photo checklists, invoices, and title deeds.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary btn-sm" onclick="openUploadModal()">+ Upload New Document</button>
+          </div>
+        </div>
+
+        <!-- Vault Two-Column Layout -->
+        <div class="vault-layout">
+          <!-- Left: Folder Categories -->
+          <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 18px; height: fit-content; box-shadow: var(--shadow-sm);">
+            <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">
+              VAULT DIRECTORIES
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div class="folder-item active" onclick="filterFolder('all', this)">
+                <span>📁 All Documents</span>
+                <span id="folder-count-all" class="badge badge-info" style="font-size: 10px; padding: 2px 6px;">0</span>
+              </div>
+              <div class="folder-item" onclick="filterFolder('Tenancy Contract', this)">
+                <span>📑 Tenancy Contracts</span>
+                <span id="folder-count-contracts" class="badge" style="font-size: 10px; padding: 2px 6px;">0</span>
+              </div>
+              <div class="folder-item" onclick="filterFolder('Inspection Report', this)">
+                <span>📋 Condition Reports</span>
+                <span id="folder-count-inspections" class="badge" style="font-size: 10px; padding: 2px 6px;">0</span>
+              </div>
+              <div class="folder-item" onclick="filterFolder('Property Deed', this)">
+                <span>🏛️ Property Deeds</span>
+                <span id="folder-count-deeds" class="badge" style="font-size: 10px; padding: 2px 6px;">0</span>
+              </div>
+              <div class="folder-item" onclick="filterFolder('Invoice / Receipt', this)">
+                <span>🧾 Receipts & Invoices</span>
+                <span id="folder-count-receipts" class="badge" style="font-size: 10px; padding: 2px 6px;">0</span>
+              </div>
+            </div>
+
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle); font-size: 11px; color: var(--text-muted);">
+              <strong>Vault Security:</strong><br>
+              AES-256 encrypted at rest. Compliant with property manager audit standards.
+            </div>
+          </div>
+
+          <!-- Right: Document Cards Grid -->
+          <div>
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm);">
+              <input type="text" id="vault-search" class="form-control" style="max-width: 320px;" placeholder="Search documents by title or file name..." oninput="renderVaultGrid()">
+              <div id="vault-stats-text" style="font-size: 12px; font-weight: 700; color: var(--text-muted);">
+                Showing all files
+              </div>
+            </div>
+
+            <div id="vault-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px;">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/shared.js"></script>
+  <script>
+    let activeFolderCategory = 'all';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSharedLayout('documents');
+      refreshCurrentPage();
+    });
+
+    function refreshCurrentPage() {
+      renderSharedLayout('documents');
+      updateFolderCounts();
+      renderVaultGrid();
+    }
+
+    function filterFolder(category, elem) {
+      activeFolderCategory = category;
+      document.querySelectorAll('.folder-item').forEach(f => f.classList.remove('active'));
+      if (elem) elem.classList.add('active');
+      renderVaultGrid();
+    }
+
+    function updateFolderCounts() {
+      const db = dbStore.getDB();
+      const docs = db.documents || [];
+
+      document.getElementById('folder-count-all').innerText = docs.length;
+      document.getElementById('folder-count-contracts').innerText = docs.filter(d => d.docType === 'Tenancy Contract').length;
+      document.getElementById('folder-count-inspections').innerText = docs.filter(d => d.docType === 'Inspection Report').length;
+      document.getElementById('folder-count-deeds').innerText = docs.filter(d => d.docType === 'Property Deed').length;
+      document.getElementById('folder-count-receipts').innerText = docs.filter(d => d.docType === 'Invoice / Receipt').length;
+    }
+
+    function renderVaultGrid() {
+      const db = dbStore.getDB();
+      const docs = db.documents || [];
+      const links = db.documentLinks || [];
+      const search = (document.getElementById('vault-search').value || '').toLowerCase();
+      const container = document.getElementById('vault-grid');
+
+      const filtered = docs.filter(d => {
+        const matchCategory = activeFolderCategory === 'all' || d.docType === activeFolderCategory;
+        const matchSearch = !search || d.title.toLowerCase().includes(search) || d.docType.toLowerCase().includes(search);
+        return matchCategory && matchSearch;
+      });
+
+      document.getElementById('vault-stats-text').innerText = `Showing ${filtered.length} files`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column: span 2; text-align: center; padding: 48px; background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); color: var(--text-muted);">
+            No documents found in this directory.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(d => {
+        const link = links.find(l => l.docId === d.id);
+        const icon = d.docType === 'Tenancy Contract' ? '📑' : (d.docType === 'Inspection Report' ? '📋' : (d.docType === 'Property Deed' ? '🏛️' : '🧾'));
+
+        return `
+          <div class="file-card">
+            <div style="display: flex; gap: 14px; align-items: flex-start;">
+              <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+                ${icon}
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${d.title}">${d.title}</div>
+                <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">
+                  ${d.docType} • ${d.fileSize}
+                </div>
+              </div>
+            </div>
+
+            <div style="background: #f8fafc; padding: 8px 12px; border-radius: 6px; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+              <span>Uploaded: <strong>${d.uploadedAt}</strong></span>
+              ${link ? `<span class="badge badge-info" style="font-size: 10px;">${link.entityType}</span>` : '<span class="badge badge-paid">Verified</span>'}
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: 4px;">
+              <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="previewDocModal('${d.id}')">Preview 👁️</button>
+              <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="downloadDocMock('${d.title}')">Download 📥</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function previewDocModal(docId) {
+      const db = dbStore.getDB();
+      const d = (db.documents || []).find(x => x.id === docId);
+      if (!d) return;
+
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = `Preview: ${d.title}`;
+      body.innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 24px; min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 12px;">📄</div>
+          <h4 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">${d.title}</h4>
+          <span class="badge badge-paid" style="margin-bottom: 12px;">✔️ Verified Authenticated Document</span>
+          <p style="font-size: 12.5px; color: var(--text-muted); max-width: 400px;">
+            Document Type: <strong>${d.docType}</strong><br>
+            File Size: <strong>${d.fileSize}</strong> | Archived Date: <strong>${d.uploadedAt}</strong><br>
+            Encrypted hash check: SHA-256 Verified.
+          </p>
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Close</button>
+        <button class="btn btn-primary" onclick="downloadDocMock('${d.title}')">Download File</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function downloadDocMock(filename) {
+      const element = document.createElement('a');
+      element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(`NestPad Verified Document Archive: ${filename}\nTimestamp: ${new Date().toISOString()}`));
+      element.setAttribute('download', filename);
+      element.style.display = 'none';
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+      showToast(`Downloaded: ${filename}`, 'success');
+    }
+
+    function openUploadModal() {
+      const db = dbStore.getDB();
+      const units = db.units || [];
+
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = '📂 Upload Document to Vault';
+      body.innerHTML = `
+        <div class="form-group">
+          <label>Document Title</label>
+          <input type="text" id="modal-doc-title" class="form-control" placeholder="e.g. Tenancy_Agreement_Unit5B.pdf">
+        </div>
+
+        <div class="form-group">
+          <label>Document Category</label>
+          <select id="modal-doc-cat" class="form-control">
+            <option>Tenancy Contract</option>
+            <option>Inspection Report</option>
+            <option>Property Deed</option>
+            <option>Invoice / Receipt</option>
+            <option>General File</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Associate with Unit (Optional)</label>
+          <select id="modal-doc-unit" class="form-control">
+            <option value="">-- General Property File --</option>
+            ${units.map(u => `<option value="${u.id}">${u.unitNumber} (${u.status})</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Select File (PDF, DOCX, JPG, PNG)</label>
+          <input type="file" id="modal-doc-file" class="form-control" onchange="autoFillDocTitle(this)">
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitUploadDoc()">Upload & Archive</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function autoFillDocTitle(input) {
+      if (input.files && input.files[0]) {
+        document.getElementById('modal-doc-title').value = input.files[0].name;
+      }
+    }
+
+    function submitUploadDoc() {
+      const title = document.getElementById('modal-doc-title').value;
+      const cat = document.getElementById('modal-doc-cat').value;
+      const unitId = document.getElementById('modal-doc-unit').value;
+
+      if (!title || !title.trim()) { alert('Please enter a document title.'); return; }
+
+      logic.addDocument(title.trim(), cat, '2.1 MB', unitId ? 'Unit' : null, unitId || null);
+      closeGlobalModal();
+      showToast(`Document "${title.trim()}" securely uploaded to vault!`, 'success');
+      refreshCurrentPage();
+    }
+  </script>
+</body>
+</html>

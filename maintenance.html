@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NestPad — Maintenance & Upkeep Diary</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main id="main-content" class="main-content">
+      <div id="header-container"></div>
+
+      <div class="page-body">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">
+              PROPERTY UPKEEP & CONTRACTOR OPERATIONS
+            </div>
+            <h2 style="font-size: 28px; font-weight: 800; margin-top: 4px;">Repairs, Work Orders & Vendor Database</h2>
+            <p style="color: var(--text-muted);">Standardized workflow: Tenant/Manager logs issue → Triage → Vendor Assigned → Work Executed → Tenant Satisfaction Poll.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="openAddVendorModal()">+ Register Vendor</button>
+            <button class="btn btn-primary btn-sm" onclick="openLogMaintenanceModal()">+ Log Repair Issue</button>
+          </div>
+        </div>
+
+        <!-- Metrics Bar -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Requests</span>
+            <div id="maint-total-val" style="font-size: 32px; font-weight: 800; margin: 8px 0;">0</div>
+            <span class="badge badge-info">Lifetime Logged</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Active Pipeline</span>
+            <div id="maint-open-val" style="font-size: 32px; font-weight: 800; color: var(--primary); margin: 8px 0;">0</div>
+            <span class="badge badge-warning">Needs Action / In Progress</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Urgent Attention</span>
+            <div id="maint-urgent-val" style="font-size: 32px; font-weight: 800; color: #dc2626; margin: 8px 0;">0</div>
+            <span class="badge badge-overdue">Priority Triage</span>
+          </div>
+
+          <div class="stat-card">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Resolved Repairs</span>
+            <div id="maint-resolved-val" style="font-size: 32px; font-weight: 800; margin: 8px 0;">0</div>
+            <span class="badge badge-paid">● Verified Complete</span>
+          </div>
+        </div>
+
+        <!-- 3-Column Kanban Pipeline -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 28px 0 16px 0;">
+          <h3 style="font-size: 17px; font-weight: 800;">📊 Maintenance Kanban Pipeline</h3>
+          <div style="font-size: 12px; color: var(--text-muted);">Click any card to view timeline logs or progress status</div>
+        </div>
+
+        <div class="kanban-board" style="margin-bottom: 36px;">
+          <!-- Column 1: Submitted -->
+          <div class="kanban-col">
+            <div class="kanban-col-header">
+              <span>📋 1. Submitted (Triage)</span>
+              <span id="badge-count-submitted" class="badge badge-warning">0</span>
+            </div>
+            <div id="kanban-col-submitted" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Cards rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Column 2: In Progress -->
+          <div class="kanban-col">
+            <div class="kanban-col-header">
+              <span>🛠️ 2. In Progress (Vendor Assigned)</span>
+              <span id="badge-count-inprogress" class="badge badge-overdue">0</span>
+            </div>
+            <div id="kanban-col-inprogress" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Cards rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Column 3: Resolved -->
+          <div class="kanban-col">
+            <div class="kanban-col-header">
+              <span>🟢 3. Resolved & Polled</span>
+              <span id="badge-count-resolved" class="badge badge-paid">0</span>
+            </div>
+            <div id="kanban-col-resolved" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Cards rendered dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Vendor Directory -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3 style="font-size: 18px; font-weight: 800;">👷 Preferred Contractors & Vendor Roster</h3>
+            <p style="font-size: 12.5px; color: var(--text-muted);">Pre-vetted trade professionals with stored bank details for direct maintenance dispatches.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="openAddVendorModal()">+ Register New Vendor</button>
+        </div>
+
+        <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-sm);">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>VENDOR ID</th>
+                <th>COMPANY / SERVICE</th>
+                <th>TRADE SPECIALTY</th>
+                <th>CONTACT PERSON</th>
+                <th>PHONE NUMBER</th>
+                <th>BANK DISBURSEMENT ACC</th>
+                <th>PERFORMANCE</th>
+                <th>ACTION</th>
+              </tr>
+            </thead>
+            <tbody id="vendor-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/shared.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSharedLayout('maintenance');
+      refreshCurrentPage();
+    });
+
+    function refreshCurrentPage() {
+      renderSharedLayout('maintenance');
+      const m = logic.getMetrics();
+      const db = dbStore.getDB();
+      const reqs = db.maintenanceRequests || [];
+
+      document.getElementById('maint-total-val').innerText = reqs.length;
+      document.getElementById('maint-open-val').innerText = m.openMaint;
+      document.getElementById('maint-urgent-val').innerText = m.urgentMaint;
+      document.getElementById('maint-resolved-val').innerText = m.resolvedMaint;
+
+      renderKanbanBoard();
+      renderVendorDirectory();
+    }
+
+    function renderKanbanBoard() {
+      const db = dbStore.getDB();
+      const reqs = db.maintenanceRequests || [];
+      const units = db.units || [];
+      const vendors = db.vendors || [];
+      const workOrders = db.workOrders || [];
+
+      const colSubmitted = document.getElementById('kanban-col-submitted');
+      const colInProgress = document.getElementById('kanban-col-inprogress');
+      const colResolved = document.getElementById('kanban-col-resolved');
+
+      const submittedItems = reqs.filter(r => r.status === 'Submitted');
+      const inProgressItems = reqs.filter(r => r.status === 'In Progress');
+      const resolvedItems = reqs.filter(r => r.status === 'Resolved');
+
+      document.getElementById('badge-count-submitted').innerText = submittedItems.length;
+      document.getElementById('badge-count-inprogress').innerText = inProgressItems.length;
+      document.getElementById('badge-count-resolved').innerText = resolvedItems.length;
+
+      // Render Submitted
+      colSubmitted.innerHTML = submittedItems.length === 0
+        ? '<div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 24px;">No submitted issues awaiting triage.</div>'
+        : submittedItems.map(r => renderKanbanCard(r, units, vendors, workOrders)).join('');
+
+      // Render In Progress
+      colInProgress.innerHTML = inProgressItems.length === 0
+        ? '<div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 24px;">No repairs currently in progress.</div>'
+        : inProgressItems.map(r => renderKanbanCard(r, units, vendors, workOrders)).join('');
+
+      // Render Resolved
+      colResolved.innerHTML = resolvedItems.length === 0
+        ? '<div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 24px;">No resolved repairs in archive.</div>'
+        : resolvedItems.map(r => renderKanbanCard(r, units, vendors, workOrders)).join('');
+    }
+
+    function renderKanbanCard(r, units, vendors, workOrders) {
+      const u = units.find(x => x.id === r.unitId);
+      const wo = workOrders.find(w => w.requestId === r.id);
+      const v = wo ? vendors.find(x => x.id === wo.vendorId) : null;
+
+      const isUrgent = r.urgency === 'URGENT';
+
+      return `
+        <div class="kanban-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <strong>${u ? u.unitNumber : 'Unit'}</strong>
+            <span class="badge ${isUrgent ? 'badge-overdue' : 'badge-warning'}">${r.urgency}</span>
+          </div>
+
+          <div style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">${r.issue}</div>
+          <div style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">${r.description || 'No description entered.'}</div>
+
+          <div style="background: #f8fafc; padding: 8px 10px; border-radius: 6px; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Category: <strong>${r.category}</strong></span>
+            <span style="color: var(--text-muted);">${r.dateReported}</span>
+          </div>
+
+          ${v ? `
+            <div style="font-size: 11.5px; color: var(--primary); font-weight: 700;">
+              🛠️ Vendor: ${v.companyName} (${wo.scheduledDate || 'Scheduled'})
+            </div>
+          ` : ''}
+
+          ${r.status === 'Resolved' && r.satisfactionRating ? `
+            <div style="background: #ecfdf5; border: 1px solid var(--primary-border); border-radius: 6px; padding: 6px 10px; font-size: 11.5px; color: #047857; font-weight: 700;">
+              ⭐ Tenant Poll: ${r.satisfactionRating} / 5 Stars ($${r.repairCost || 0} cost)
+            </div>
+          ` : ''}
+
+          <div style="display: flex; gap: 6px; margin-top: 6px; pt-2; border-top: 1px solid var(--border-subtle);">
+            ${r.status === 'Submitted' ? `
+              <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="openAssignVendorModal('${r.id}')">Assign Vendor →</button>
+            ` : ''}
+
+            ${r.status === 'In Progress' ? `
+              <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="openResolvePollModal('${r.id}')">Resolve & Request Poll ✔️</button>
+            ` : ''}
+
+            ${r.status === 'Resolved' ? `
+              <span style="font-size: 11px; color: #047857; font-weight: 700; padding: 4px;">✔️ Case Closed & Invoiced</span>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderVendorDirectory() {
+      const db = dbStore.getDB();
+      const vendors = db.vendors || [];
+      const tbody = document.getElementById('vendor-table-body');
+
+      tbody.innerHTML = vendors.map(v => `
+        <tr>
+          <td><code>${v.id}</code></td>
+          <td><strong>${v.companyName}</strong></td>
+          <td><span class="badge badge-info">${v.trade}</span></td>
+          <td>${v.contactPerson}</td>
+          <td>${v.phone}</td>
+          <td><code>${v.bankAccount}</code></td>
+          <td>⭐ ${v.rating} / 5.0</td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="alert('Dispatching call to ${v.contactPerson} at ${v.phone}...')">📞 Call</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openAssignVendorModal(requestId) {
+      const db = dbStore.getDB();
+      const req = (db.maintenanceRequests || []).find(m => m.id === requestId);
+      const vendors = db.vendors || [];
+
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = `Assign Contractor: ${req ? req.issue : 'Repair'}`;
+      body.innerHTML = `
+        <div class="form-group">
+          <label>Select Vendor from Directory</label>
+          <select id="modal-assign-vendor" class="form-control">
+            ${vendors.map(v => `
+              <option value="${v.id}">${v.companyName} (${v.trade}) - ⭐ ${v.rating}</option>
+            `).join('')}
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Estimated Quote / Service Fee ($)</label>
+            <input type="number" id="modal-assign-cost" class="form-control" value="120">
+          </div>
+          <div class="form-group">
+            <label>Scheduled Appointment Date</label>
+            <input type="date" id="modal-assign-date" class="form-control" value="2026-10-16">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Special Contractor Access Instructions</label>
+          <textarea id="modal-assign-notes" class="form-control" placeholder="Tenant will be home, lockbox code, master key access..."></textarea>
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAssignVendor('${requestId}')">Dispatch Work Order</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function submitAssignVendor(requestId) {
+      const vendorId = document.getElementById('modal-assign-vendor').value;
+      const cost = document.getElementById('modal-assign-cost').value;
+      const date = document.getElementById('modal-assign-date').value;
+
+      logic.updateMaintenanceStatus(requestId, 'In Progress', vendorId, cost);
+      closeGlobalModal();
+      showToast('Vendor assigned! Work order scheduled and synced to calendar.', 'success');
+      refreshCurrentPage();
+    }
+
+    function openResolvePollModal(requestId) {
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = 'Resolve Maintenance & Record Tenant Poll';
+      body.innerHTML = `
+        <div class="form-group">
+          <label>Final Invoiced Repair Cost ($)</label>
+          <input type="number" id="modal-poll-cost" class="form-control" value="120">
+        </div>
+        <div class="form-group">
+          <label>Tenant Satisfaction Quick-Poll Rating (1 to 5 Stars)</label>
+          <select id="modal-poll-rating" class="form-control">
+            <option value="5" selected>⭐⭐⭐⭐⭐ (5 Stars - Completely Fixed & On-Time)</option>
+            <option value="4">⭐⭐⭐⭐ (4 Stars - Satisfactory)</option>
+            <option value="3">⭐⭐⭐ (3 Stars - Neutral / Adequate)</option>
+            <option value="2">⭐⭐ (2 Stars - Delays or Mess Left Behind)</option>
+            <option value="1">⭐ (1 Star - Poor Workmanship)</option>
+          </select>
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitResolvePoll('${requestId}')">Complete & Archive</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function submitResolvePoll(requestId) {
+      const cost = document.getElementById('modal-poll-cost').value;
+      const rating = document.getElementById('modal-poll-rating').value;
+
+      logic.updateMaintenanceStatus(requestId, 'Resolved', null, cost, rating);
+      closeGlobalModal();
+      showToast('Issue marked Resolved and satisfaction poll archived!', 'success');
+      refreshCurrentPage();
+    }
+
+    function openAddVendorModal() {
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = '👷 Register Contractor in Vendor Database';
+      body.innerHTML = `
+        <div class="form-group">
+          <label>Company / Contractor Name</label>
+          <input type="text" id="modal-v-name" class="form-control" placeholder="e.g. Bangsar Lock & Key Services">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Trade Specialty</label>
+            <select id="modal-v-trade" class="form-control">
+              <option>Plumbing</option>
+              <option>Electrical</option>
+              <option>HVAC / Aircon</option>
+              <option>Locksmith & Keys</option>
+              <option>Painting / Turnover</option>
+              <option>General Handyman</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Contact Person</label>
+            <input type="text" id="modal-v-person" class="form-control" placeholder="e.g. Keith Lee">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="text" id="modal-v-phone" class="form-control" placeholder="(555) 000-0000">
+          </div>
+          <div class="form-group">
+            <label>Bank Disbursement Account</label>
+            <input type="text" id="modal-v-bank" class="form-control" placeholder="Maybank 512019901">
+          </div>
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAddVendor()">Save Vendor</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function submitAddVendor() {
+      const name = document.getElementById('modal-v-name').value;
+      const trade = document.getElementById('modal-v-trade').value;
+      const person = document.getElementById('modal-v-person').value;
+      const phone = document.getElementById('modal-v-phone').value;
+      const bank = document.getElementById('modal-v-bank').value;
+
+      if (!name || !name.trim()) { alert('Please enter vendor name.'); return; }
+
+      const db = dbStore.getDB();
+      db.vendors = db.vendors || [];
+      const id = 'v-' + Date.now();
+      db.vendors.push({
+        id,
+        companyName: name.trim(),
+        trade,
+        contactPerson: person || 'Manager',
+        phone: phone || '(555) 000-0000',
+        rating: 5.0,
+        bankAccount: bank || 'Bank on file'
+      });
+      dbStore.logAudit('Sarah Jenkins', 'Vendor', id, 'CREATED', 'None', name.trim());
+      localStorage.setItem(dbStore.storageKey, JSON.stringify(db));
+      window.dispatchEvent(new CustomEvent('nestpad_db_updated', { detail: { entityKey: 'vendors', action: 'VENDOR_CREATED', timestamp: Date.now() } }));
+      closeGlobalModal();
+      showToast(`Vendor "${name.trim()}" added to database!`, 'success');
+      refreshCurrentPage();
+    }
+  </script>
+</body>
+</html>

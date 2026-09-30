@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NestPad — Tenants & Leases Roster</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main id="main-content" class="main-content">
+      <div id="header-container"></div>
+
+      <div class="page-body">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">
+              LEGAL CONTRACTS & TENANCY LIFECYCLE
+            </div>
+            <h2 style="font-size: 28px; font-weight: 800; margin-top: 4px;">Tenancy Agreements & Resident Master</h2>
+            <p style="color: var(--text-muted);">Person Master ≠ Tenancy Contract. Multi-tenant relationships, LHDN stamping verification, and condition checklists.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary btn-sm" onclick="openNewTenancyModal()">+ New Tenancy Agreement</button>
+          </div>
+        </div>
+
+        <!-- Two-Column Layout -->
+        <div class="tenants-layout">
+          <!-- Left: Tenancy Roster List -->
+          <div class="roster-card">
+            <div style="padding: 16px; border-bottom: 1px solid var(--border-color); background: #f8fafc;">
+              <input type="text" id="roster-search" class="form-control" placeholder="Search tenant name or unit..." oninput="renderRosterList()">
+              <div style="display: flex; gap: 6px; margin-top: 10px;">
+                <select id="roster-status-filter" class="form-control" style="font-size: 12px; padding: 6px;" onchange="renderRosterList()">
+                  <option value="all">All Leases</option>
+                  <option value="Active">Active Leases</option>
+                  <option value="Expiring">Expiring (60 Days)</option>
+                  <option value="Closed">Past / Closed</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="roster-items-container" style="max-height: 680px; overflow-y: auto;">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Right: Detailed Tenancy Dossier -->
+          <div class="detail-card" id="tenant-dossier-container">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/shared.js"></script>
+  <script>
+    let selectedTenancyId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSharedLayout('tenants');
+      refreshCurrentPage();
+    });
+
+    function refreshCurrentPage() {
+      renderSharedLayout('tenants');
+      const db = dbStore.getDB();
+      const tenancies = db.tenancies || [];
+
+      if (!selectedTenancyId && tenancies.length > 0) {
+        selectedTenancyId = tenancies[0].id;
+      }
+
+      renderRosterList();
+      renderTenancyDossier(selectedTenancyId);
+    }
+
+    function renderRosterList() {
+      const db = dbStore.getDB();
+      const tenancies = db.tenancies || [];
+      const units = db.units || [];
+      const parties = db.tenancyParties || [];
+      const persons = db.persons || [];
+      const charges = db.charges || [];
+
+      const query = (document.getElementById('roster-search').value || '').toLowerCase();
+      const statusFilter = document.getElementById('roster-status-filter').value;
+      const container = document.getElementById('roster-items-container');
+
+      const filtered = tenancies.filter(t => {
+        const u = units.find(x => x.id === t.unitId);
+        const party = parties.find(tp => tp.tenancyId === t.id && tp.role === 'Primary Tenant');
+        const p = party ? persons.find(x => x.id === party.personId) : null;
+
+        const matchStatus = statusFilter === 'all' ||
+          (statusFilter === 'Active' && (t.status === 'Active' || t.status === 'Renewal Pending')) ||
+          (statusFilter === 'Expiring' && t.status === 'Expiring') ||
+          (statusFilter === 'Closed' && t.status === 'Closed');
+
+        const matchQuery = !query ||
+          (p && p.name.toLowerCase().includes(query)) ||
+          (u && u.unitNumber.toLowerCase().includes(query)) ||
+          t.id.toLowerCase().includes(query);
+
+        return matchStatus && matchQuery;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px;">No matching tenancies found.</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(t => {
+        const u = units.find(x => x.id === t.unitId);
+        const party = parties.find(tp => tp.tenancyId === t.id && tp.role === 'Primary Tenant');
+        const p = party ? persons.find(x => x.id === party.personId) : null;
+        const overdue = charges.some(c => c.tenancyId === t.id && c.status === 'Overdue');
+
+        const initials = p ? p.name.split(' ').map(n=>n[0]).join('').slice(0,2) : 'TN';
+        const isSelected = t.id === selectedTenancyId;
+
+        return `
+          <div class="roster-item ${isSelected ? 'active' : ''}" onclick="selectTenancy('${t.id}')">
+            <div class="avatar-initials">${initials}</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong style="font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p ? p.name : 'Unknown Tenant'}</strong>
+                <span class="badge ${t.status === 'Active' ? 'badge-paid' : 'badge-warning'}" style="font-size: 9.5px; padding: 2px 6px;">${t.status}</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                ${u ? u.unitNumber : 'Unit'} • $${t.rentAmount}/mo
+              </div>
+              ${overdue ? `
+                <div style="font-size: 10.5px; color: #dc2626; font-weight: 700; margin-top: 2px;">⚠️ Rent Overdue</div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectTenancy(tenancyId) {
+      selectedTenancyId = tenancyId;
+      renderRosterList();
+      renderTenancyDossier(tenancyId);
+    }
+
+    function renderTenancyDossier(tenancyId) {
+      const container = document.getElementById('tenant-dossier-container');
+      const db = dbStore.getDB();
+      const t = (db.tenancies || []).find(x => x.id === tenancyId);
+
+      if (!t) {
+        container.innerHTML = '<div style="text-align: center; padding: 48px; color: var(--text-muted);">Please select a tenancy from the roster.</div>';
+        return;
+      }
+
+      const u = (db.units || []).find(x => x.id === t.unitId) || {};
+      const b = (db.buildings || []).find(x => x.id === u.buildingId) || {};
+      const party = (db.tenancyParties || []).find(tp => tp.tenancyId === t.id && tp.role === 'Primary Tenant');
+      const p = party ? (db.persons || []).find(x => x.id === party.personId) : null;
+      const coParties = (db.tenancyParties || []).filter(tp => tp.tenancyId === t.id && tp.role !== 'Primary Tenant');
+      const coTenants = coParties.map(cp => (db.persons || []).find(x => x.id === cp.personId)).filter(Boolean);
+      const dl = (db.depositLedgers || []).find(x => x.id === 'dep-' + t.id.slice(2)) || (db.depositLedgers ? db.depositLedgers[0] : null);
+      const docs = (db.documents || []).filter(d => (db.documentLinks || []).some(dl => dl.docId === d.id && dl.entityId === t.id));
+      const insp = (db.inspections || []).find(x => x.tenancyId === t.id);
+
+      const initials = p ? p.name.split(' ').map(n=>n[0]).join('').slice(0,2) : 'TN';
+
+      container.innerHTML = `
+        <!-- Tenant Header Card -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <div class="avatar-initials" style="width: 52px; height: 52px; font-size: 18px;">${initials}</div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <h3 style="font-size: 22px; font-weight: 800;">${p ? p.name : 'Unknown Resident'}</h3>
+                <span class="badge ${t.status === 'Active' ? 'badge-paid' : 'badge-warning'}">${t.status}</span>
+              </div>
+              <div style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
+                🚪 <strong>${u.unitNumber}</strong> • ${b.name || 'Building'} (${u.floor || 'Floor'})
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="alert('Calling tenant at ${p ? p.phone : 'number on file'}...')">📞 Call</button>
+            <button class="btn btn-secondary btn-sm" onclick="renewLeasePrompt('${t.id}')">Renew Lease</button>
+            <button class="btn btn-danger btn-sm" onclick="moveOutPrompt('${t.id}')">Move-Out Workflow</button>
+          </div>
+        </div>
+
+        <!-- 4 Vital Contract Stats -->
+        <div class="vitals-grid">
+          <div>
+            <span style="font-size: 10.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Agreed Rent</span>
+            <div class="vital-val" style="color: var(--primary);">$${t.rentAmount}/mo</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Due on Day ${t.dueDay} of month</div>
+          </div>
+
+          <div>
+            <span style="font-size: 10.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Escrow Deposit</span>
+            <div class="vital-val">$${dl ? (Number(dl.secDepositRec || 0) + Number(dl.utilDepositRec || 0)) : t.rentAmount}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Protected in PM Trust</div>
+          </div>
+
+          <div>
+            <span style="font-size: 10.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Lease Expiration</span>
+            <div class="vital-val" style="font-size: 16px; margin-top: 8px;">${t.endDate}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Started ${t.startDate}</div>
+          </div>
+
+          <div>
+            <span style="font-size: 10.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">LHDN Stamping Ref</span>
+            <div class="vital-val" style="font-size: 13px; margin-top: 8px; font-family: monospace;">${t.stampingRef || 'Verified'}</div>
+            <div style="font-size: 11px; color: #047857; font-weight: 700;">✔️ Stamped Legal</div>
+          </div>
+        </div>
+
+        <!-- Resident Contact & Identity Truth -->
+        <div>
+          <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 10px;">👤 Resident Identification & Emergency Contacts</h4>
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 12.5px;">
+            <div>
+              <strong>Email:</strong> ${p ? p.email : 'N/A'}<br>
+              <strong>Phone:</strong> ${p ? p.phone : 'N/A'}<br>
+              <strong>IC / Passport:</strong> <code>${p ? p.icPassport : 'N/A'}</code>
+            </div>
+            <div>
+              <strong>Emergency Contact:</strong><br>
+              <span style="color: var(--text-muted);">${p ? p.emergencyContact : 'None listed'}</span>
+              ${coTenants.length > 0 ? `
+                <div style="margin-top: 6px;"><strong>Co-Occupants:</strong> ${coTenants.map(c=>c.name).join(', ')}</div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Move-In / Move-Out Condition Checklist -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4 style="font-size: 15px; font-weight: 800;">📋 Move-In & Turnover Inspection Checklist</h4>
+            <span class="badge badge-paid">Archived Report</span>
+          </div>
+
+          <div style="border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden;">
+            <table class="data-table" style="box-shadow: none; border: none;">
+              <thead>
+                <tr>
+                  <th>INSPECTION AREA</th>
+                  <th>INSPECTED ITEM</th>
+                  <th>VERIFIED CONDITION</th>
+                  <th>OBSERVATION NOTES</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${insp ? insp.items.map(item => `
+                  <tr>
+                    <td><strong>${item.area}</strong></td>
+                    <td>${item.item}</td>
+                    <td><span class="badge ${item.condition === 'Good' ? 'badge-paid' : 'badge-warning'}">${item.condition}</span></td>
+                    <td style="color: var(--text-muted); font-size: 12px;">${item.notes}</td>
+                  </tr>
+                `).join('') : `
+                  <tr>
+                    <td><strong>Kitchen</strong></td>
+                    <td>Refrigerator & Stove</td>
+                    <td><span class="badge badge-paid">Good</span></td>
+                    <td style="color: var(--text-muted);">Clean, appliances tested and functional.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Bathroom</strong></td>
+                    <td>Plumbing & Shower Grout</td>
+                    <td><span class="badge badge-paid">Good</span></td>
+                    <td style="color: var(--text-muted);">No water pressure issues observed.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Living Room</strong></td>
+                    <td>Air Conditioner & Windows</td>
+                    <td><span class="badge badge-paid">Good</span></td>
+                    <td style="color: var(--text-muted);">Remote tested with new batteries.</td>
+                  </tr>
+                `}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Attached Documents -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4 style="font-size: 15px; font-weight: 800;">📂 Attached Leases & Vault Files</h4>
+            <a href="documents.html" class="btn btn-secondary btn-sm">Open Vault ↗</a>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            ${docs.length > 0 ? docs.map(d => `
+              <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong>📄 ${d.title}</strong>
+                  <div style="font-size: 11px; color: var(--text-muted);">${d.docType} • ${d.fileSize} • Uploaded ${d.uploadedAt}</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="alert('Viewing digital copy of ${d.title}...')">Preview 👁️</button>
+              </div>
+            `).join('') : `
+              <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong>📄 Tenancy_Agreement_Stamped_${u.unitNumber}.pdf</strong>
+                  <div style="font-size: 11px; color: var(--text-muted);">Tenancy Contract • 2.8 MB • LHDN Digital Stamped</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="alert('Opening official signed agreement PDF...')">Preview 👁️</button>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    function openNewTenancyModal() {
+      const db = dbStore.getDB();
+      const units = db.units || [];
+      const vacantUnits = units.filter(u => u.status === 'Vacant');
+
+      const title = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      title.innerText = '📑 Create New Tenancy Agreement';
+      body.innerHTML = `
+        <div class="form-group">
+          <label>Assign to Available Unit</label>
+          <select id="modal-t-unit" class="form-control">
+            ${units.map(u => `
+              <option value="${u.id}">${u.unitNumber} (${u.status}) - Target Rent $${u.targetRent}</option>
+            `).join('')}
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Tenant Full Legal Name</label>
+            <input type="text" id="modal-t-name" class="form-control" placeholder="e.g. Jessica Thorne">
+          </div>
+          <div class="form-group">
+            <label>IC / Passport Number</label>
+            <input type="text" id="modal-t-ic" class="form-control" placeholder="e.g. 910214-14-5544">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="modal-t-email" class="form-control" placeholder="jessica.t@example.com">
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="text" id="modal-t-phone" class="form-control" placeholder="(555) 441-9920">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label>Monthly Rent ($)</label>
+            <input type="number" id="modal-t-rent" class="form-control" value="1800">
+          </div>
+          <div class="form-group">
+            <label>Lease Start Date</label>
+            <input type="date" id="modal-t-start" class="form-control" value="2026-11-01">
+          </div>
+          <div class="form-group">
+            <label>Lease End Date</label>
+            <input type="date" id="modal-t-end" class="form-control" value="2027-10-31">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Emergency Contact</label>
+          <input type="text" id="modal-t-emerg" class="form-control" placeholder="e.g. David Thorne (Father) (555) 998-1122">
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitNewTenancy()">Execute Agreement</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function submitNewTenancy() {
+      const unitId = document.getElementById('modal-t-unit').value;
+      const name = document.getElementById('modal-t-name').value;
+      const ic = document.getElementById('modal-t-ic').value;
+      const email = document.getElementById('modal-t-email').value;
+      const phone = document.getElementById('modal-t-phone').value;
+      const rent = document.getElementById('modal-t-rent').value;
+      const start = document.getElementById('modal-t-start').value;
+      const end = document.getElementById('modal-t-end').value;
+      const emerg = document.getElementById('modal-t-emerg').value;
+
+      if (!name || !name.trim()) { alert('Please enter tenant name.'); return; }
+
+      const personData = {
+        name: name.trim(),
+        icPassport: ic.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        emergencyContact: emerg.trim()
+      };
+
+      const newTenancyId = logic.createTenancy(unitId, personData, rent, start, end);
+      selectedTenancyId = newTenancyId;
+      closeGlobalModal();
+      showToast(`Tenancy agreement executed for ${name.trim()}!`, 'success');
+      refreshCurrentPage();
+    }
+
+    function renewLeasePrompt(tenancyId) {
+      const newEnd = prompt('Enter new expiration date (YYYY-MM-DD):', '2027-10-31');
+      if (newEnd) {
+        const newRent = prompt('Enter renewal rent amount ($/mo):', '1850');
+        logic.renewTenancy(tenancyId, newEnd, newRent);
+        showToast('Lease renewed successfully!', 'success');
+        refreshCurrentPage();
+      }
+    }
+
+    function moveOutPrompt(tenancyId) {
+      if (confirm('Execute formal move-out offboarding? This will mark the lease closed, change the unit to Vacant, and generate a move-out inspection task.')) {
+        logic.terminateTenancy(tenancyId);
+        showToast('Move-out completed! Unit status updated to Vacant.', 'success');
+        refreshCurrentPage();
+      }
+    }
+  </script>
+</body>
+</html>

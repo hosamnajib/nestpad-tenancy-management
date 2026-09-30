@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NestPad — Calendar & Property Operations Schedule</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main id="main-content" class="main-content">
+      <div id="header-container"></div>
+
+      <div class="page-body">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">
+              PROPERTY OPERATIONS SCHEDULE
+            </div>
+            <h2 style="font-size: 28px; font-weight: 800; margin-top: 4px;">Unified Operational Calendar</h2>
+            <p style="color: var(--text-muted);">Real-time aggregated schedule of rent due dates, lease turnovers, contractor appointments, and safety inspections.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="exportICal()">📥 Export iCal (.ics)</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddCalendarEventModal()">+ Schedule Event</button>
+          </div>
+        </div>
+
+        <div class="calendar-card">
+          <!-- Calendar Header Controls -->
+          <div class="cal-header">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <h3 style="font-size: 22px; font-weight: 800;" id="cal-month-title">October 2026</h3>
+              <div style="display: flex; gap: 4px;">
+                <button class="btn btn-secondary btn-sm" onclick="changeMonth(-1)">❮ Prev</button>
+                <button class="btn btn-secondary btn-sm" onclick="resetToToday()">Today</button>
+                <button class="btn btn-secondary btn-sm" onclick="changeMonth(1)">Next ❯</button>
+              </div>
+            </div>
+
+            <!-- Legend Filters -->
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <span class="badge badge-paid" style="cursor: pointer;" onclick="filterEventType('Rent')">● Rent Due</span>
+              <span class="badge badge-warning" style="cursor: pointer;" onclick="filterEventType('Lease Expiry')">● Lease Expiry</span>
+              <span class="badge badge-overdue" style="cursor: pointer;" onclick="filterEventType('Maintenance')">● Contractor Visit</span>
+              <span class="badge badge-info" style="cursor: pointer;" onclick="filterEventType('Inspection')">● Inspection</span>
+              <span class="badge" style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; cursor: pointer;" onclick="filterEventType('all')">Show All</span>
+            </div>
+          </div>
+
+          <!-- 7-Column Day Names Grid -->
+          <div class="cal-grid">
+            <div class="cal-day-name">SUN</div>
+            <div class="cal-day-name">MON</div>
+            <div class="cal-day-name">TUE</div>
+            <div class="cal-day-name">WED</div>
+            <div class="cal-day-name">THU</div>
+            <div class="cal-day-name">FRI</div>
+            <div class="cal-day-name">SAT</div>
+
+            <!-- Days cells rendered by JS -->
+            <div id="cal-cells-wrapper" style="display: contents;"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/shared.js"></script>
+  <script>
+    let currentCalDate = new Date('2026-10-14');
+    let activeTypeFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSharedLayout('calendar');
+      refreshCurrentPage();
+    });
+
+    function refreshCurrentPage() {
+      renderSharedLayout('calendar');
+      renderCalendar();
+    }
+
+    function changeMonth(offset) {
+      currentCalDate.setMonth(currentCalDate.getMonth() + offset);
+      renderCalendar();
+    }
+
+    function resetToToday() {
+      currentCalDate = new Date('2026-10-14');
+      renderCalendar();
+    }
+
+    function filterEventType(type) {
+      activeTypeFilter = type;
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+      const year = currentCalDate.getFullYear();
+      const month = currentCalDate.getMonth();
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      
+      document.getElementById('cal-month-title').innerText = `${monthNames[month]} ${year}`;
+
+      const firstDayOfMonth = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+      const allEvents = logic.getAggregatedCalendarEvents();
+      const wrapper = document.getElementById('cal-cells-wrapper');
+      let html = '';
+
+      // 1. Previous month trailing days
+      for (let i = firstDayOfMonth - 1; i >= 0; i--) {
+        const dayNum = daysInPrevMonth - i;
+        html += `
+          <div class="cal-cell other-month">
+            <div class="cal-day-num">${dayNum}</div>
+          </div>
+        `;
+      }
+
+      // 2. Current month days
+      const todayISO = '2026-10-14';
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const isToday = dateStr === todayISO;
+
+        // Find events on this date
+        const dayEvents = allEvents.filter(e => {
+          const matchDate = e.date === dateStr;
+          const matchFilter = activeTypeFilter === 'all' || e.type === activeTypeFilter;
+          return matchDate && matchFilter;
+        });
+
+        html += `
+          <div class="cal-cell ${isToday ? 'today' : ''}" onclick="handleCellClick('${dateStr}')">
+            <div class="cal-day-num">
+              <span>${d}</span>
+              ${isToday ? '<span style="font-size: 9px; font-weight: 800; color: var(--primary);">TODAY</span>' : ''}
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 4px; overflow-y: auto;">
+              ${dayEvents.map(e => `
+                <div class="cal-event-chip ${e.chipClass || 'chip-custom'}" title="${e.title} (${e.time})" onclick="event.stopPropagation(); showEventDetail('${e.title}', '${e.date}', '${e.time}', '${e.type}', '${e.status || ''}')">
+                  ${e.title}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      // 3. Next month trailing days to complete 35 or 42 grid cells
+      const totalRendered = firstDayOfMonth + daysInMonth;
+      const remaining = (7 - (totalRendered % 7)) % 7;
+      for (let j = 1; j <= remaining; j++) {
+        html += `
+          <div class="cal-cell other-month">
+            <div class="cal-day-num">${j}</div>
+          </div>
+        `;
+      }
+
+      wrapper.innerHTML = html;
+    }
+
+    function handleCellClick(dateStr) {
+      document.getElementById('global-modal-title').innerText = `Schedule Event for ${dateStr}`;
+      openAddCalendarEventModal();
+      setTimeout(() => {
+        const dateInput = document.getElementById('modal-event-date');
+        if (dateInput) dateInput.value = dateStr;
+      }, 50);
+    }
+
+    function showEventDetail(title, date, time, type, status) {
+      const modalTitle = document.getElementById('global-modal-title');
+      const body = document.getElementById('global-modal-body');
+      const footer = document.getElementById('global-modal-footer');
+
+      modalTitle.innerText = '📅 Event Details';
+      body.innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px;">
+          <h4 style="font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 8px;">${title}</h4>
+          <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+            <span class="badge badge-info">${type}</span>
+            ${status ? `<span class="badge badge-paid">${status}</span>` : ''}
+          </div>
+          <div style="font-size: 13px; display: flex; flex-direction: column; gap: 6px;">
+            <div><strong>Date:</strong> 📅 ${date}</div>
+            <div><strong>Time:</strong> ⏰ ${time || 'All Day'}</div>
+            <div><strong>Source:</strong> Operational Relational Ledger</div>
+          </div>
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeGlobalModal()">Close</button>
+      `;
+      document.getElementById('global-modal').classList.add('active');
+    }
+
+    function exportICal() {
+      const events = logic.getAggregatedCalendarEvents();
+      let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//NestPad Property Management//EN\n";
+      events.forEach(e => {
+        const cleanDate = (e.date || '2026-10-14').replace(/-/g, '');
+        ics += "BEGIN:VEVENT\n";
+        ics += `SUMMARY:${e.title}\n`;
+        ics += `DTSTART;VALUE=DATE:${cleanDate}\n`;
+        ics += `DESCRIPTION:${e.type} - Scheduled via NestPad\n`;
+        ics += `STATUS:CONFIRMED\n`;
+        ics += "END:VEVENT\n";
+      });
+      ics += "END:VCALENDAR";
+
+      const link = document.createElement("a");
+      link.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+      link.download = `NestPad_Schedule_${new Date().toISOString().slice(0,10)}.ics`;
+      link.click();
+      showToast('iCalendar (.ics) export file downloaded!', 'success');
+    }
+  </script>
+</body>
+</html>
