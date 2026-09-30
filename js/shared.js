@@ -142,15 +142,17 @@ function renderSharedLayout(activePage = 'dashboard') {
           </div>
 
           <!-- Active User -->
-          <div class="user-admin-card" style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+          <div class="user-admin-card" style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px; margin-top: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
               <div class="avatar-initials" style="width: 32px; height: 32px; font-size: 11px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">${currentUser ? currentUser.initials : 'SJ'}</div>
               <div style="line-height: 1.2; overflow: hidden;">
                 <div style="font-size: 12px; font-weight: 700; color: var(--text-main); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">${currentUser ? currentUser.name : 'Sarah Jenkins'}</div>
                 <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">${currentUser ? currentUser.role : 'Manager / Admin'}</div>
               </div>
             </div>
-            <button onclick="handleLogout()" title="Sign Out" style="background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 4px; border-radius: 4px;" aria-label="Sign Out">🚪</button>
+            <button onclick="handleLogout()" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center; font-size: 11.5px; font-weight: 700; color: #dc2626; border-color: #fecaca; background: #ffffff; padding: 6px 10px; gap: 6px;">
+              <span>🚪</span> Sign Out
+            </button>
           </div>
         </div>
       </aside>
@@ -179,8 +181,8 @@ function renderSharedLayout(activePage = 'dashboard') {
           </div>
         </div>
 
-        <div class="header-actions">
-          <button class="btn btn-primary" onclick="openQuickActionModal()">
+        <div class="header-actions" style="display: flex; align-items: center; gap: 10px;">
+          <button class="btn btn-primary btn-sm" onclick="openQuickActionModal()" style="padding: 7px 14px; font-size: 12.5px;">
             ⚡ + Quick Action
           </button>
           
@@ -189,13 +191,17 @@ function renderSharedLayout(activePage = 'dashboard') {
             ${alertCount > 0 ? `<span class="notification-badge">${alertCount}</span>` : ''}
           </button>
 
-          <div class="user-profile">
-            <div class="avatar-initials">SJ</div>
-            <div class="user-info">
-              <span class="user-name">Sarah Jenkins</span>
-              <span class="user-role">Admin / Manager</span>
+          <div class="user-profile" style="display: flex; align-items: center; gap: 8px; padding: 4px 10px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div class="avatar-initials" style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">${currentUser ? currentUser.initials : 'SJ'}</div>
+            <div class="user-info" style="line-height: 1.2;">
+              <span class="user-name" style="font-size: 12px; font-weight: 700; display: block;">${currentUser ? currentUser.name : 'Sarah Jenkins'}</span>
+              <span class="user-role" style="font-size: 10px; color: var(--text-muted); font-weight: 600;">${currentUser ? currentUser.role : 'Manager / Admin'}</span>
             </div>
           </div>
+
+          <button class="btn btn-secondary btn-sm" onclick="handleLogout()" style="font-weight: 700; color: #dc2626; border-color: #fecaca; background: #fff5f5; padding: 7px 12px; display: inline-flex; align-items: center; gap: 6px;" title="Sign out of NestPad">
+            <span>🚪</span> Sign Out
+          </button>
         </div>
       </header>
     `;
