@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — NestPad Property Operations</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 10% 20%, rgba(4, 120, 87, 0.08) 0%, transparent 40%),
+                  radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+                  var(--bg-main);
+      padding: 24px;
+      color: var(--text-main);
+    }
+
+    .auth-wrapper {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      max-width: 1020px;
+      width: 100%;
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.12);
+      overflow: hidden;
+    }
+
+    @media (max-width: 860px) {
+      .auth-wrapper {
+        grid-template-columns: 1fr;
+      }
+      .brand-side {
+        display: none;
+      }
+    }
+
+    /* Left Brand Showcase */
+    .brand-side {
+      background: linear-gradient(145deg, #064e3b 0%, #047857 55%, #059669 100%);
+      color: white;
+      padding: 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-side::after {
+      content: '';
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, rgba(110, 231, 183, 0.25) 0%, transparent 70%);
+      top: -60px;
+      right: -60px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .feature-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+
+    .feature-pill span {
+      font-size: 18px;
+    }
+
+    /* Right Form Side */
+    .form-side {
+      padding: 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .form-header h2 {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .form-header p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: #ffffff;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+    }
+
+    .input-wrapper input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.12);
+    }
+
+    .toggle-pwd {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 13px 20px;
+      font-size: 14.5px;
+      font-weight: 700;
+      color: white;
+      background: var(--primary);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(4, 120, 87, 0.25);
+    }
+
+    .btn-login:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(4, 120, 87, 0.35);
+    }
+
+    .btn-login:active {
+      transform: translateY(0);
+    }
+
+    /* Demo Quick-Pick Badges */
+    .demo-accounts {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px dashed var(--border-color);
+    }
+
+    .demo-accounts-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .demo-btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .demo-btn {
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background: var(--bg-main);
+      color: var(--text-main);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+    }
+
+    .demo-btn:hover {
+      background: var(--primary-light);
+      border-color: var(--primary-border);
+      color: var(--primary);
+    }
+
+    .demo-btn strong {
+      display: block;
+      font-size: 12px;
+      color: var(--text-main);
+    }
+
+    .demo-btn span {
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+
+    .auth-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 18px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="auth-wrapper">
+    <!-- Left Hero Column -->
+    <div class="brand-side">
+      <div>
+        <div class="brand-badge">⚡ Live Operations</div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: white; color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px;">N</div>
+          <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">NestPad</h1>
+        </div>
+        <p style="font-size: 15px; opacity: 0.9; line-height: 1.6; margin-bottom: 32px;">
+          Unified Property Management Platform. Real-time lease lifecycles, automated rent allocation ledgers, and operational task orchestration.
+        </p>
+
+        <div class="feature-pill">
+          <span>📊</span>
+          <div>
+            <div>Automated Rent Allocations</div>
+            <small style="opacity: 0.8; font-size: 11px;">Instant reconciliation against outstanding charges</small>
+          </div>
+        </div>
+
+        <div class="feature-pill">
+          <span>🔧</span>
+          <div>
+            <div>Maintenance & Work Orders</div>
+            <small style="opacity: 0.8; font-size: 11px;">Vendor dispatch with owner quotation approval</small>
+          </div>
+        </div>
+
+        <div class="feature-pill">
+          <span>🛡️</span>
+          <div>
+            <div>Complete Immutable Audit Trail</div>
+            <small style="opacity: 0.8; font-size: 11px;">Every ledger change recorded with timestamp</small>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size: 12px; opacity: 0.75; padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.2);">
+        © 2026 NestPad Operations • Enterprise Tenancy Suite
+      </div>
+    </div>
+
+    <!-- Right Login Form Column -->
+    <div class="form-side">
+      <div class="form-header">
+        <h2>Sign In</h2>
+        <p>Access your properties, tenants, and financial ledgers</p>
+      </div>
+
+      <div id="auth-error-box" class="auth-error"></div>
+
+      <form id="login-form" onsubmit="handleLoginSubmit(event)">
+        <div class="form-group">
+          <label for="login-email">Email Address</label>
+          <div class="input-wrapper">
+            <input type="email" id="login-email" required placeholder="name@nestpad.com" value="admin@nestpad.com" autocomplete="email">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label for="login-password" style="margin-bottom: 0;">Password</label>
+            <a href="#" onclick="alert('For demo accounts, use the quick-select buttons below.'); return false;" style="font-size: 12px; color: var(--primary); text-decoration: none; font-weight: 600;">Forgot Password?</a>
+          </div>
+          <div class="input-wrapper">
+            <input type="password" id="login-password" required placeholder="••••••••" value="admin123" autocomplete="current-password">
+            <button type="button" class="toggle-pwd" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">👁️</button>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); cursor: pointer;">
+            <input type="checkbox" id="remember-me" checked style="accent-color: var(--primary); width: 16px; height: 16px;">
+            <span>Remember this device</span>
+          </label>
+        </div>
+
+        <button type="submit" id="login-submit-btn" class="btn-login">
+          <span>Sign In to Dashboard</span> ↗
+        </button>
+      </form>
+
+      <!-- Quick Demo Account Fillers -->
+      <div class="demo-accounts">
+        <div class="demo-accounts-title">Quick Demo Login:</div>
+        <div class="demo-btn-group">
+          <button type="button" class="demo-btn" onclick="fillDemo('admin@nestpad.com', 'admin123', 'Sarah Jenkins', 'Manager / Admin')">
+            <strong>Sarah Jenkins</strong>
+            <span>Admin / Manager</span>
+          </button>
+          <button type="button" class="demo-btn" onclick="fillDemo('owner@nestpad.com', 'owner123', 'Robert Vance', 'Property Owner')">
+            <strong>Robert Vance</strong>
+            <span>Property Owner</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Redirect if already logged in
+    (function checkExistingSession() {
+      const savedUser = localStorage.getItem('nestpad_current_user');
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          if (parsed && parsed.email) {
+            window.location.replace('dashboard.html');
+          }
+        } catch(e) {}
+      }
+    })();
+
+    function togglePasswordVisibility() {
+      const pwd = document.getElementById('login-password');
+      pwd.type = pwd.type === 'password' ? 'text' : 'password';
+    }
+
+    function fillDemo(email, pwd, name, role) {
+      document.getElementById('login-email').value = email;
+      document.getElementById('login-password').value = pwd;
+      document.getElementById('login-email').focus();
+    }
+
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errorBox = document.getElementById('auth-error-box');
+      const submitBtn = document.getElementById('login-submit-btn');
+
+      errorBox.style.display = 'none';
+
+      if (!email || !password) {
+        errorBox.innerText = 'Please enter both email and password.';
+        errorBox.style.display = 'block';
+        return;
+      }
+
+      submitBtn.innerHTML = '<span>Signing In...</span>';
+      submitBtn.disabled = true;
+
+      setTimeout(() => {
+        let name = 'Sarah Jenkins';
+        let role = 'Manager / Admin';
+        let initials = 'SJ';
+
+        if (email.toLowerCase().includes('owner') || email.toLowerCase().includes('vance')) {
+          name = 'Robert Vance';
+          role = 'Property Owner';
+          initials = 'RV';
+        } else if (email.toLowerCase().includes('maint')) {
+          name = 'David Miller';
+          role = 'Maintenance Lead';
+          initials = 'DM';
+        } else {
+          // Extract name from email if custom
+          const part = email.split('@')[0];
+          name = part.charAt(0).toUpperCase() + part.slice(1);
+          initials = name.slice(0, 2).toUpperCase();
+        }
+
+        const userSession = {
+          email,
+          name,
+          role,
+          initials,
+          loginTime: new Date().toISOString()
+        };
+
+        localStorage.setItem('nestpad_current_user', JSON.stringify(userSession));
+        window.location.replace('dashboard.html');
+      }, 350);
+    }
+  </script>
+</body>
+</html>

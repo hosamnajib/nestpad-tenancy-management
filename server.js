@@ -652,7 +652,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const relPath = pathname === '/' ? 'dashboard.html' : pathname.replace(/^\//, '');
+  const relPath = pathname === '/' ? 'index.html' : pathname.replace(/^\//, '');
   const candidates = [
     path.join(process.cwd(), relPath),
     path.join(__dirname, relPath),

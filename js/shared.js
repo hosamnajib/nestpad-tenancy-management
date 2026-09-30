@@ -1,7 +1,28 @@
-/* NestPad Layer 3 — Shared Component Framework, Nav, and Global Modals */
+function getCurrentUser() {
+  try {
+    const raw = localStorage.getItem('nestpad_current_user');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return null;
+}
+
+function handleLogout() {
+  if (confirm('Are you sure you want to sign out?')) {
+    localStorage.removeItem('nestpad_current_user');
+    window.location.replace('login.html');
+  }
+}
 
 // Render standard sidebar and top header across all pages
 function renderSharedLayout(activePage = 'dashboard') {
+  // Auth guard: redirect to login if session missing
+  const currentUser = getCurrentUser();
+  const isLoginPage = window.location.pathname.endsWith('login.html');
+  if (!currentUser && !isLoginPage) {
+    window.location.replace('login.html');
+    return;
+  }
+
   // 1. Ensure Toast Container exists
   if (!document.getElementById('toast-container')) {
     const tc = document.createElement('div');
@@ -121,12 +142,15 @@ function renderSharedLayout(activePage = 'dashboard') {
           </div>
 
           <!-- Active User -->
-          <div class="user-admin-card" style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 10px; display: flex; align-items: center; gap: 10px;">
-            <div class="avatar-initials" style="width: 30px; height: 30px; font-size: 11px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">SJ</div>
-            <div style="line-height: 1.2; overflow: hidden;">
-              <div style="font-size: 12px; font-weight: 700; color: var(--text-main); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Sarah Jenkins</div>
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Manager / Admin</div>
+          <div class="user-admin-card" style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+              <div class="avatar-initials" style="width: 32px; height: 32px; font-size: 11px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">${currentUser ? currentUser.initials : 'SJ'}</div>
+              <div style="line-height: 1.2; overflow: hidden;">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-main); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">${currentUser ? currentUser.name : 'Sarah Jenkins'}</div>
+                <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">${currentUser ? currentUser.role : 'Manager / Admin'}</div>
+              </div>
             </div>
+            <button onclick="handleLogout()" title="Sign Out" style="background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 4px; border-radius: 4px;" aria-label="Sign Out">🚪</button>
           </div>
         </div>
       </aside>
