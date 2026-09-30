@@ -193,18 +193,31 @@
         return;
       }
 
-      tbody.innerHTML = filtered.map(a => `
-        <tr>
-          <td><code>${a.id}</code></td>
-          <td><strong>${a.user}</strong></td>
-          <td><span class="badge badge-info">${a.entity}</span></td>
-          <td><code>${a.entityId}</code></td>
-          <td><span class="badge badge-warning">${a.action}</span></td>
-          <td style="color: #dc2626; font-size: 12px;">${a.oldValue}</td>
-          <td style="color: #047857; font-weight: 700; font-size: 12px;">${a.newValue}</td>
-          <td style="color: var(--text-muted); font-size: 11px;">${a.timestamp}</td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = filtered.map(a => {
+        let clickHandler = '';
+        if (a.entity === 'Unit') clickHandler = `showUnitModal('${a.entityId}')`;
+        else if (a.entity === 'Tenancy' || a.entity === 'Person') clickHandler = `showTenantModal('${a.entityId}')`;
+        else if (a.entity === 'Building') clickHandler = `showBuildingModal('${a.entityId}')`;
+        else if (a.entity === 'Charge') clickHandler = `showChargeModal('${a.entityId}')`;
+        else if (a.entity === 'MaintenanceRequest') clickHandler = `showMaintenanceModal('${a.entityId}')`;
+
+        return `
+          <tr>
+            <td><code>${a.id}</code></td>
+            <td><strong>${a.user}</strong></td>
+            <td><span class="badge badge-info">${a.entity}</span></td>
+            <td>
+              ${clickHandler 
+                ? `<span class="clickable-entity" onclick="${clickHandler}" title="Click to inspect ${a.entity} details"><code>${a.entityId}</code></span>` 
+                : `<code>${a.entityId}</code>`}
+            </td>
+            <td><span class="badge badge-warning">${a.action}</span></td>
+            <td style="color: #dc2626; font-size: 12px;">${a.oldValue}</td>
+            <td style="color: #047857; font-weight: 700; font-size: 12px;">${a.newValue}</td>
+            <td style="color: var(--text-muted); font-size: 11px;">${a.timestamp}</td>
+          </tr>
+        `;
+      }).join('');
     }
 
     function clearAuditLogFilter() {

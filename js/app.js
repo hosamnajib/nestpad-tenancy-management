@@ -109,13 +109,17 @@ function renderDashboardView(container) {
         <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <strong style="font-size: 16px;">Unit 3B • Alex Rivera</strong>
+              <strong style="font-size: 16px;">
+                <span class="clickable-entity" onclick="showUnitModal('u-3b')">🚪 Unit 3B</span> • 
+                <span class="clickable-entity" onclick="showTenantModal('p-103')">👤 Alex Rivera</span>
+              </strong>
               <span class="badge badge-overdue" style="margin-left: 8px;">13 Days Overdue</span>
             </div>
-            <strong style="color: #dc2626; font-size: 16px;">$1,750</strong>
+            <strong style="color: #dc2626; font-size: 16px; cursor: pointer;" onclick="showChargeModal('chg-102')">$1,750</strong>
           </div>
           <p style="font-size: 13px; color: var(--text-muted); margin: 8px 0 14px 0;">October Rent charge past due date (Oct 1). Auto-reminder logged.</p>
           <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="showTenantModal('p-103')">👤 Dossier</button>
             <button class="btn btn-secondary btn-sm" onclick="alert('Calling Alex Rivera at (555) 392-1084...')">📞 Call Alex</button>
             <button class="btn btn-secondary btn-sm" onclick="sendCommunication('t-1002', 'SMS Ping', 'Overdue Rent Notice')">💬 Send Text Ping</button>
             <button class="btn btn-primary btn-sm" onclick="openRecordPaymentModal('t-1002', 'p-103', 'chg-102', 1750)">Mark as Paid</button>
@@ -126,14 +130,17 @@ function renderDashboardView(container) {
         <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <strong style="font-size: 16px;">Unit 1A • Maple Crest</strong>
+              <strong style="font-size: 16px;">
+                <span class="clickable-entity" onclick="showUnitModal('u-1a')">🚪 Unit 1A</span> • 
+                <span class="clickable-entity" onclick="showBuildingModal('b-1')">🏢 Maple Crest</span>
+              </strong>
               <span class="badge badge-overdue" style="margin-left: 8px;">URGENT</span>
             </div>
           </div>
-          <p style="font-size: 13px; color: var(--text-muted); margin: 8px 0 14px 0;">Kitchen sink P-trap leak under basin. Plumber Dave scheduled for tomorrow 9:00 AM.</p>
+          <p style="font-size: 13px; color: var(--text-muted); margin: 8px 0 14px 0;"><span class="clickable-entity" onclick="showMaintenanceModal('m-1')">🔧 Kitchen sink P-trap leak</span> under basin. Plumber Dave scheduled for tomorrow 9:00 AM.</p>
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">🛠️ Vendor: Apex Plumbing Co.</span>
-            <button class="btn btn-secondary btn-sm" onclick="switchTab('maintenance')">View Work Order ↗</button>
+            <button class="btn btn-secondary btn-sm" onclick="showMaintenanceModal('m-1')">Inspect Work Order ↗</button>
           </div>
         </div>
 
@@ -147,11 +154,17 @@ function renderDashboardView(container) {
                 <span style="font-size: 9px;">DAYS</span>
               </div>
               <div>
-                <strong>${exp.unitNumber} — ${exp.tenantName}</strong>
+                <strong>
+                  <span class="clickable-entity" onclick="showUnitModal('${exp.unitNumber}')">🚪 ${exp.unitNumber}</span> — 
+                  <span class="clickable-entity" onclick="showTenantModal('${exp.tenantName}')">👤 ${exp.tenantName}</span>
+                </strong>
                 <div style="font-size: 12px; color: var(--text-muted);">Ends: ${exp.endDate} • Rent: $${exp.rentAmount}/mo • Status: ${exp.status}</div>
               </div>
             </div>
-            <button class="btn btn-secondary btn-sm" onclick="openRenewalModal('${exp.id}')">Renewal / Move-Out</button>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-secondary btn-sm" onclick="showTenantModal('${exp.tenantName}')">Dossier</button>
+              <button class="btn btn-secondary btn-sm" onclick="openRenewalModal('${exp.id}')">Renewal / Move-Out</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -229,8 +242,12 @@ function renderPropertiesView(container) {
           <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; gap: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
-                <strong style="font-size: 18px;">${u.unitNumber}</strong>
-                <div style="font-size: 12px; color: var(--text-muted);">${building.name} • ${u.floor}</div>
+                <strong style="font-size: 18px;">
+                  <span class="clickable-entity" onclick="showUnitModal('${u.id}')">🚪 ${u.unitNumber}</span>
+                </strong>
+                <div style="font-size: 12px; color: var(--text-muted);">
+                  <span class="clickable-entity" onclick="showBuildingModal('${building.id}')">${building.name}</span> • ${u.floor}
+                </div>
               </div>
               <span class="badge ${u.status === 'Occupied' ? 'badge-paid' : 'badge-warning'}">${u.status}</span>
             </div>
@@ -305,13 +322,13 @@ function renderLedgerView(container) {
 
           return `
             <tr>
-              <td><code>${c.id}</code></td>
-              <td><strong>${u ? u.unitNumber : 'Unit'}</strong> (${c.tenancyId})</td>
+              <td><span class="clickable-entity" onclick="showChargeModal('${c.id}')"><code>${c.id}</code></span></td>
+              <td><strong><span class="clickable-entity" onclick="showUnitModal('${u ? u.id : ''}')">🚪 ${u ? u.unitNumber : 'Unit'}</span></strong></td>
               <td>${c.chargeType}</td>
               <td>${c.period}</td>
               <td><strong>$${c.amount.toLocaleString()}</strong></td>
               <td style="color: ${isOverdue ? '#dc2626' : 'var(--text-main)'}; font-weight: ${isOverdue ? '800' : '500'};">${c.dueDate}</td>
-              <td><span class="badge ${c.status === 'Paid' ? 'badge-paid' : 'badge-overdue'}">${c.status}</span></td>
+              <td><span class="badge ${c.status === 'Paid' ? 'badge-paid' : 'badge-overdue'}" onclick="showChargeModal('${c.id}')" style="cursor: pointer;">${c.status}</span></td>
               <td>
                 ${c.status !== 'Paid' ? `
                   <button class="btn btn-primary btn-sm" onclick="openRecordPaymentModal('${c.tenancyId}', 'p-103', '${c.id}', ${c.amount})">Record Payment</button>
@@ -501,15 +518,16 @@ function renderTenantsView(container) {
 
           return `
             <tr>
-              <td><code>${t.id}</code></td>
-              <td><strong>${u ? u.unitNumber : 'Unit'}</strong></td>
-              <td><strong>${person ? person.name : 'Tenant'}</strong></td>
+              <td><span class="clickable-entity" onclick="showTenantModal('${t.id}')"><code>${t.id}</code></span></td>
+              <td><strong><span class="clickable-entity" onclick="showUnitModal('${u ? u.id : ''}')">🚪 ${u ? u.unitNumber : 'Unit'}</span></strong></td>
+              <td><strong><span class="clickable-entity" onclick="showTenantModal('${person ? person.id : ''}')">👤 ${person ? person.name : 'Tenant'}</span></strong></td>
               <td>${t.startDate} to ${t.endDate}</td>
               <td>$${t.rentAmount}/mo</td>
               <td><span class="badge badge-paid">✔️ ${t.stampingStatus}</span></td>
               <td><span class="badge ${t.status === 'Active' ? 'badge-paid' : 'badge-warning'}">${t.status}</span></td>
               <td>
                 <div style="display: flex; gap: 4px;">
+                  <button class="btn btn-secondary btn-sm" onclick="showTenantModal('${t.id}')">Dossier</button>
                   <button class="btn btn-secondary btn-sm" onclick="openRenewalModal('${t.id}')">Renew</button>
                   <button class="btn btn-secondary btn-sm" onclick="initiateMoveOut('${t.id}')">Move-Out</button>
                 </div>

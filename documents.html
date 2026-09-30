@@ -164,7 +164,11 @@
 
             <div style="background: #f8fafc; padding: 8px 12px; border-radius: 6px; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
               <span>Uploaded: <strong>${d.uploadedAt}</strong></span>
-              ${link ? `<span class="badge badge-info" style="font-size: 10px;">${link.entityType}</span>` : '<span class="badge badge-paid">Verified</span>'}
+              ${link ? `
+                <span class="badge badge-info clickable-entity" style="font-size: 10px; cursor: pointer; text-decoration: none;" onclick="if ('${link.entityType}'==='Tenancy') showTenantModal('${link.entityId}'); else if ('${link.entityType}'==='Unit') showUnitModal('${link.entityId}'); else if ('${link.entityType}'==='Building') showBuildingModal('${link.entityId}');" title="Click to inspect ${link.entityType}">
+                  🔗 ${link.entityType}: ${link.entityId}
+                </span>
+              ` : '<span class="badge badge-paid">Verified</span>'}
             </div>
 
             <div style="display: flex; gap: 8px; margin-top: 4px;">

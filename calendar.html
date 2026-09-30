@@ -151,7 +151,7 @@
 
             <div style="display: flex; flex-direction: column; gap: 4px; overflow-y: auto;">
               ${dayEvents.map(e => `
-                <div class="cal-event-chip ${e.chipClass || 'chip-custom'}" title="${e.title} (${e.time})" onclick="event.stopPropagation(); showEventDetail('${e.title}', '${e.date}', '${e.time}', '${e.type}', '${e.status || ''}')">
+                <div class="cal-event-chip ${e.chipClass || 'chip-custom'}" title="${e.title} (${e.time})" onclick="event.stopPropagation(); showEventDetail('${encodeURIComponent(JSON.stringify(e))}')">
                   ${e.title}
                 </div>
               `).join('')}
@@ -183,24 +183,76 @@
       }, 50);
     }
 
-    function showEventDetail(title, date, time, type, status) {
+    function showEventDetail(encodedEvent) {
+      let e = {};
+      try {
+        e = JSON.parse(decodeURIComponent(encodedEvent));
+      } catch (err) {
+        e = { title: 'Calendar Event', date: '2026-10-14', type: 'General' };
+      }
+
+      const db = (typeof dbStore !== 'undefined') ? dbStore.getDB() : {};
+      const u = e.unitId ? (db.units || []).find(x => x.id === e.unitId) : null;
+      const t = e.tenancyId ? (db.tenancies || []).find(x => x.id === e.tenancyId) : null;
+      const tp = t ? (db.tenancyParties || []).find(x => x.tenancyId === t.id && x.role === 'Primary Tenant') : null;
+      const p = tp ? (db.persons || []).find(x => x.id === tp.personId) : null;
+
       const modalTitle = document.getElementById('global-modal-title');
       const body = document.getElementById('global-modal-body');
       const footer = document.getElementById('global-modal-footer');
 
-      modalTitle.innerText = '📅 Event Details';
+      modalTitle.innerText = `📅 Event: ${e.title}`;
       body.innerHTML = `
-        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px;">
-          <h4 style="font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 8px;">${title}</h4>
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px; margin-bottom: 16px;">
+          <h4 style="font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 8px;">${e.title}</h4>
           <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-            <span class="badge badge-info">${type}</span>
-            ${status ? `<span class="badge badge-paid">${status}</span>` : ''}
+            <span class="badge badge-info">${e.type}</span>
+            ${e.status ? `<span class="badge badge-paid">${e.status}</span>` : ''}
           </div>
           <div style="font-size: 13px; display: flex; flex-direction: column; gap: 6px;">
-            <div><strong>Date:</strong> 📅 ${date}</div>
-            <div><strong>Time:</strong> ⏰ ${time || 'All Day'}</div>
-            <div><strong>Source:</strong> Operational Relational Ledger</div>
+            <div><strong>Date:</strong> 📅 ${e.date}</div>
+            <div><strong>Time:</strong> ⏰ ${e.time || 'All Day'}</div>
+            ${e.notes ? `<div><strong>Notes:</strong> 📝 ${e.notes}</div>` : ''}
           </div>
+        </div>
+
+        <!-- Relational Links -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12.5px;">
+          ${u ? `
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+              <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Related Unit</span>
+              <div style="margin-top: 4px;">
+                <span class="clickable-entity" onclick="showUnitModal('${u.id}')" style="font-size: 14px; font-weight: 800;">🚪 ${u.unitNumber}</span>
+              </div>
+            </div>
+          ` : ''}
+
+          ${p ? `
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+              <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Related Resident</span>
+              <div style="margin-top: 4px;">
+                <span class="clickable-entity" onclick="showTenantModal('${p.id}')" style="font-size: 14px; font-weight: 800;">👤 ${p.name}</span>
+              </div>
+            </div>
+          ` : ''}
+
+          ${e.chargeId ? `
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+              <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Related Charge</span>
+              <div style="margin-top: 4px;">
+                <span class="clickable-entity" onclick="showChargeModal('${e.chargeId}')" style="font-size: 14px; font-weight: 800;">🧾 Charge Record</span>
+              </div>
+            </div>
+          ` : ''}
+
+          ${e.requestId ? `
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+              <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Maintenance Case</span>
+              <div style="margin-top: 4px;">
+                <span class="clickable-entity" onclick="showMaintenanceModal('${e.requestId}')" style="font-size: 14px; font-weight: 800;">🔧 Case Details</span>
+              </div>
+            </div>
+          ` : ''}
         </div>
       `;
 

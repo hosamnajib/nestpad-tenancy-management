@@ -205,16 +205,24 @@
 
         return `
           <tr>
-            <td><code>${c.id}</code></td>
             <td>
-              <strong>${u ? u.unitNumber : 'Unit'}</strong>
-              <div style="font-size: 11.5px; color: var(--text-muted);">${p ? p.name : 'Unknown Tenant'}</div>
+              <span class="clickable-entity" onclick="showChargeModal('${c.id}')" title="Click to inspect charge and payment settlement">
+                <code>${c.id}</code>
+              </span>
+            </td>
+            <td>
+              <strong>
+                <span class="clickable-entity" onclick="showUnitModal('${u ? u.id : ''}')" title="Click to view unit specifications">🚪 ${u ? u.unitNumber : 'Unit'}</span>
+              </strong>
+              <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                <span class="clickable-entity" onclick="showTenantModal('${p ? p.id : (t ? t.id : '')}')" title="Click to view tenant dossier">👤 ${p ? p.name : 'Unknown Tenant'}</span>
+              </div>
             </td>
             <td>${c.period}</td>
             <td><strong>$${Number(c.amount).toLocaleString()}</strong></td>
             <td style="color: ${isOverdue ? '#dc2626' : 'var(--text-main)'}; font-weight: ${isOverdue ? '800' : '500'};">${c.dueDate}</td>
             <td>
-              <span class="badge ${isPaid ? 'badge-paid' : (isOverdue ? 'badge-overdue' : 'badge-warning')}">${c.status}</span>
+              <span class="badge ${isPaid ? 'badge-paid' : (isOverdue ? 'badge-overdue' : 'badge-warning')}" onclick="showChargeModal('${c.id}')" style="cursor: pointer;" title="Click for breakdown">${c.status}</span>
             </td>
             <td>
               ${payment ? `
@@ -258,8 +266,12 @@
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                 <div>
-                  <strong style="font-size: 16px;">${u ? u.unitNumber : 'Unit'} Deposit Trust</strong>
-                  <div style="font-size: 11.5px; color: var(--text-muted);">Tenant: ${p ? p.name : 'Unknown'}</div>
+                  <strong style="font-size: 16px;">
+                    <span class="clickable-entity" onclick="showUnitModal('${u ? u.id : ''}')" title="Click to view unit details">🚪 ${u ? u.unitNumber : 'Unit'}</span> Deposit Trust
+                  </strong>
+                  <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                    Tenant: <span class="clickable-entity" onclick="showTenantModal('${p ? p.id : (t ? t.id : '')}')" title="Click to view tenant dossier">👤 ${p ? p.name : 'Unknown'}</span>
+                  </div>
                 </div>
                 <span class="badge badge-paid">Verified</span>
               </div>

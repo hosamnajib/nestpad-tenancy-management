@@ -183,16 +183,20 @@
             <div class="avatar-initials" style="width: 52px; height: 52px; font-size: 18px;">${initials}</div>
             <div>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <h3 style="font-size: 22px; font-weight: 800;">${p ? p.name : 'Unknown Resident'}</h3>
+                <h3 style="font-size: 22px; font-weight: 800; margin: 0;">
+                  <span class="clickable-entity" onclick="showTenantModal('${p ? p.id : t.id}')" title="Click to view tenant modal popup">👤 ${p ? p.name : 'Unknown Resident'}</span>
+                </h3>
                 <span class="badge ${t.status === 'Active' ? 'badge-paid' : 'badge-warning'}">${t.status}</span>
               </div>
-              <div style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
-                🚪 <strong>${u.unitNumber}</strong> • ${b.name || 'Building'} (${u.floor || 'Floor'})
+              <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                🚪 <strong><span class="clickable-entity" onclick="showUnitModal('${u.id}')" title="Click to inspect unit specifications">${u.unitNumber}</span></strong> • 
+                <span class="clickable-entity" onclick="showBuildingModal('${b.id}')" title="Click to view property details">${b.name || 'Building'}</span> (${u.floor || 'Floor'})
               </div>
             </div>
           </div>
 
           <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="showTenantModal('${p ? p.id : t.id}')">Inspect Dossier</button>
             <button class="btn btn-secondary btn-sm" onclick="alert('Calling tenant at ${p ? p.phone : 'number on file'}...')">📞 Call</button>
             <button class="btn btn-secondary btn-sm" onclick="renewLeasePrompt('${t.id}')">Renew Lease</button>
             <button class="btn btn-danger btn-sm" onclick="moveOutPrompt('${t.id}')">Move-Out Workflow</button>
@@ -231,15 +235,15 @@
           <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 10px;">👤 Resident Identification & Emergency Contacts</h4>
           <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 12.5px;">
             <div>
-              <strong>Email:</strong> ${p ? p.email : 'N/A'}<br>
-              <strong>Phone:</strong> ${p ? p.phone : 'N/A'}<br>
+              <strong>Email:</strong> <a href="mailto:${p ? p.email : ''}" style="color: var(--primary); font-weight: 700; text-decoration: none;">${p ? p.email : 'N/A'}</a><br>
+              <strong>Phone:</strong> <a href="tel:${p ? p.phone : ''}" style="color: var(--primary); font-weight: 700; text-decoration: none;">${p ? p.phone : 'N/A'}</a><br>
               <strong>IC / Passport:</strong> <code>${p ? p.icPassport : 'N/A'}</code>
             </div>
             <div>
               <strong>Emergency Contact:</strong><br>
               <span style="color: var(--text-muted);">${p ? p.emergencyContact : 'None listed'}</span>
               ${coTenants.length > 0 ? `
-                <div style="margin-top: 6px;"><strong>Co-Occupants:</strong> ${coTenants.map(c=>c.name).join(', ')}</div>
+                <div style="margin-top: 6px;"><strong>Co-Occupants:</strong> ${coTenants.map(c=>`<span class="clickable-entity" onclick="showTenantModal('${c.id}')">${c.name}</span>`).join(', ')}</div>
               ` : ''}
             </div>
           </div>

@@ -142,8 +142,10 @@
           <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <h4 style="font-size: 16px; font-weight: 800;">${b.name}</h4>
-                <span class="badge badge-info">${bUnits.length} Units</span>
+                <h4 style="font-size: 16px; font-weight: 800; margin: 0;">
+                  <span class="clickable-entity" onclick="showBuildingModal('${b.id}')" title="Click to view building specs">🏢 ${b.name}</span>
+                </h4>
+                <span class="badge badge-info" onclick="filterByBuilding('${b.id}')" style="cursor: pointer;" title="Filter units to this building">${bUnits.length} Units</span>
               </div>
               <p style="font-size: 12px; color: var(--text-muted); margin: 6px 0 12px 0;">📍 ${b.address}, ${b.city} (${b.postcode})</p>
               
@@ -158,8 +160,9 @@
               </div>
             </div>
 
-            <div style="margin-top: 16px; pt-2; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end;">
-              <button class="btn btn-secondary btn-sm" onclick="filterByBuilding('${b.id}')">View Units ↗</button>
+            <div style="margin-top: 16px; pt-2; border-top: 1px solid var(--border-subtle); display: flex; gap: 8px; justify-content: flex-end;">
+              <button class="btn btn-secondary btn-sm" onclick="showBuildingModal('${b.id}')">Inspect Complex</button>
+              <button class="btn btn-primary btn-sm" onclick="filterByBuilding('${b.id}')">View Units ↗</button>
             </div>
           </div>
         `;
@@ -218,8 +221,12 @@
           <div class="unit-card" style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow-sm);">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
-                <strong style="font-size: 19px;">${u.unitNumber}</strong>
-                <div style="font-size: 12px; color: var(--text-muted);">${b.name || 'Building'} • ${u.floor}</div>
+                <strong style="font-size: 19px;">
+                  <span class="clickable-entity" onclick="showUnitModal('${u.id}')" title="Click to view full unit specifications">🚪 ${u.unitNumber}</span>
+                </strong>
+                <div style="font-size: 12px; color: var(--text-muted);">
+                  <span class="clickable-entity" onclick="showBuildingModal('${b.id}')" title="Click to view building details">${b.name || 'Building'}</span> • ${u.floor}
+                </div>
               </div>
               <span class="badge ${isOccupied ? 'badge-paid' : 'badge-warning'}">${u.status}</span>
             </div>
@@ -227,7 +234,12 @@
             <div style="background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 12px; display: flex; flex-direction: column; gap: 4px;">
               <div><strong>Owner:</strong> ${owner ? owner.legalName : 'Property Holdings'} (100%)</div>
               <div><strong>Rent Target:</strong> $${Number(u.targetRent).toLocaleString()}/mo</div>
-              <div><strong>Current Tenant:</strong> ${tenantPerson ? tenantPerson.name : '(None - Vacant)'}</div>
+              <div>
+                <strong>Current Tenant:</strong> 
+                ${tenantPerson 
+                  ? `<span class="clickable-entity" onclick="showTenantModal('${tenantPerson.id}')" title="Click to inspect resident dossier">👤 ${tenantPerson.name}</span>` 
+                  : '<span style="color: var(--text-muted);">(None - Vacant)</span>'}
+              </div>
               <div><strong>Meters:</strong> ${u.electricityAcc} | ${u.waterAcc}</div>
               <div><strong>Lockbox:</strong> Code #${u.lockboxCode}</div>
             </div>
@@ -245,7 +257,7 @@
             </div>
 
             <div style="display: flex; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
-              <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="openAssetModal('${u.id}')">+ Add Asset</button>
+              <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="showUnitModal('${u.id}')">Inspect Specs</button>
               <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="openUnitEditModal('${u.id}')">Manage Unit</button>
             </div>
           </div>

@@ -185,13 +185,17 @@
             <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 14px; box-shadow: var(--shadow-sm);">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                  <strong style="font-size: 16px;">${u ? u.unitNumber : 'Unit'} • ${p ? p.name : 'Tenant'}</strong>
+                  <strong style="font-size: 16px;">
+                    <span class="clickable-entity" onclick="showUnitModal('${u ? u.id : ''}')" title="Click to view unit details">🚪 ${u ? u.unitNumber : 'Unit'}</span> • 
+                    <span class="clickable-entity" onclick="showTenantModal('${p ? p.id : (t ? t.id : '')}')" title="Click to view tenant details">👤 ${p ? p.name : 'Tenant'}</span>
+                  </strong>
                   <span class="badge badge-overdue" style="margin-left: 8px;">Overdue Rent</span>
                 </div>
-                <strong style="color: #dc2626; font-size: 18px;">$${c.amount.toLocaleString()}</strong>
+                <strong style="color: #dc2626; font-size: 18px; cursor: pointer;" onclick="showChargeModal('${c.id}')" title="Click to view charge details">$${c.amount.toLocaleString()}</strong>
               </div>
-              <p style="font-size: 13px; color: var(--text-muted); margin: 8px 0 14px 0;">${c.period} charge past due date (${c.dueDate}). Immediate follow-up required.</p>
+              <p style="font-size: 13px; color: var(--text-muted); margin: 8px 0 14px 0;"><span class="clickable-entity" onclick="showChargeModal('${c.id}')">${c.period}</span> charge past due date (${c.dueDate}). Immediate follow-up required.</p>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary btn-sm" onclick="showTenantModal('${p ? p.id : (t ? t.id : '')}')">👤 View Dossier</button>
                 <button class="btn btn-secondary btn-sm" onclick="alert('Calling ${p ? p.name : 'Tenant'} at ${p ? p.phone : 'number on file'}...')">📞 Call Tenant</button>
                 <button class="btn btn-secondary btn-sm" onclick="logCommunication('${c.tenancyId}', '${p ? p.id : ''}', 'Sent overdue rent text reminder ($${c.amount})')">💬 Send Text Ping</button>
                 <button class="btn btn-primary btn-sm" onclick="openRecordPaymentModal('${c.tenancyId}', '${p ? p.id : ''}', '${c.id}', ${c.amount})">Mark as Paid ✔️</button>
@@ -209,15 +213,20 @@
             <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 14px; box-shadow: var(--shadow-sm);">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                  <strong style="font-size: 16px;">${u ? u.unitNumber : 'Unit'} • ${b ? b.name : 'Property'}</strong>
+                  <strong style="font-size: 16px;">
+                    <span class="clickable-entity" onclick="showUnitModal('${u ? u.id : ''}')" title="Click to view unit details">🚪 ${u ? u.unitNumber : 'Unit'}</span> • 
+                    <span class="clickable-entity" onclick="showBuildingModal('${b ? b.id : ''}')" title="Click to view property details">🏢 ${b ? b.name : 'Property'}</span>
+                  </strong>
                   <span class="badge badge-overdue" style="margin-left: 8px;">URGENT REPAIR</span>
                 </div>
                 <span class="badge badge-warning">${maint.status}</span>
               </div>
-              <p style="font-size: 13px; color: var(--text-muted); margin: 8px 0 14px 0;"><strong>${maint.issue}:</strong> ${maint.description}</p>
+              <p style="font-size: 13px; color: var(--text-muted); margin: 8px 0 14px 0;">
+                <strong class="clickable-entity" onclick="showMaintenanceModal('${maint.id}')" title="Click to view case details">🔧 ${maint.issue}:</strong> ${maint.description}
+              </p>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 12px; color: var(--text-muted);">Reported: ${maint.dateReported}</span>
-                <a href="maintenance.html" class="btn btn-secondary btn-sm">Open in Maintenance ↗</a>
+                <button class="btn btn-secondary btn-sm" onclick="showMaintenanceModal('${maint.id}')">Inspect Case ↗</button>
               </div>
             </div>
           `;
@@ -239,11 +248,15 @@
                 <span style="font-size: 9px;">DAYS</span>
               </div>
               <div>
-                <strong>${exp.unitNumber} — ${exp.tenantName}</strong>
+                <strong>
+                  <span class="clickable-entity" onclick="showUnitModal('${exp.unitNumber}')" title="Click to view unit details">🚪 ${exp.unitNumber}</span> — 
+                  <span class="clickable-entity" onclick="showTenantModal('${exp.tenantName}')" title="Click to view tenant details">👤 ${exp.tenantName}</span>
+                </strong>
                 <div style="font-size: 12px; color: var(--text-muted);">Lease ends: ${exp.endDate} • Rent: $${exp.rentAmount}/mo</div>
               </div>
             </div>
             <div style="display: flex; gap: 6px;">
+              <button class="btn btn-secondary btn-sm" onclick="showTenantModal('${exp.tenantName}')">Dossier</button>
               <button class="btn btn-secondary btn-sm" onclick="renewLeasePrompt('${exp.id}')">Renew</button>
               <button class="btn btn-secondary btn-sm" onclick="moveOutPrompt('${exp.id}')">Move-Out</button>
             </div>
@@ -275,9 +288,9 @@
       const eventsContainer = document.getElementById('dashboard-events-container');
       const calEvents = logic.getAggregatedCalendarEvents().slice(0, 4);
       eventsContainer.innerHTML = calEvents.map(e => `
-        <div style="background: #f8fafc; border-left: 3px solid var(--primary); padding: 10px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: #f8fafc; border-left: 3px solid var(--primary); padding: 10px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.15s ease;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'" onclick="if ('${e.unitId || ''}') { showUnitModal('${e.unitId}'); } else if ('${e.chargeId || ''}') { showChargeModal('${e.chargeId}'); } else if ('${e.requestId || ''}') { showMaintenanceModal('${e.requestId}'); } else { window.location.href='calendar.html'; }">
           <div>
-            <div style="font-weight: 700; font-size: 13px;">${e.title}</div>
+            <div style="font-weight: 700; font-size: 13px;" class="clickable-entity">${e.title}</div>
             <div style="font-size: 11px; color: var(--text-muted);">${e.time || 'All Day'} • ${e.type}</div>
           </div>
           <span style="font-size: 11px; font-weight: 800; color: var(--primary); background: white; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color);">${e.date.slice(5)}</span>

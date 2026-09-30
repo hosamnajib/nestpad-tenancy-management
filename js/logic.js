@@ -575,6 +575,9 @@ class BusinessLogicLayer {
         const u = t ? (db.units || []).find(x => x.id === t.unitId) : null;
         events.push({
           id: 'chg-' + c.id,
+          chargeId: c.id,
+          tenancyId: c.tenancyId,
+          unitId: u ? u.id : null,
           date: c.dueDate,
           title: `Rent Due: ${u ? u.unitNumber : 'Unit'} ($${c.amount})`,
           time: 'Due EOD',
@@ -591,6 +594,8 @@ class BusinessLogicLayer {
         const u = (db.units || []).find(x => x.id === t.unitId);
         events.push({
           id: 'exp-' + t.id,
+          tenancyId: t.id,
+          unitId: u ? u.id : null,
           date: t.endDate,
           title: `Lease Expiration: ${u ? u.unitNumber : 'Unit'}`,
           time: '12:00 PM',
@@ -608,6 +613,8 @@ class BusinessLogicLayer {
       const parts = (wo.scheduledDate || '2026-10-15 09:00').split(' ');
       events.push({
         id: 'wo-' + wo.id,
+        requestId: m ? m.id : null,
+        unitId: m ? m.unitId : null,
         date: parts[0],
         title: `Vendor: ${v ? v.companyName : 'Handyman'} (${m ? m.issue : 'Repair'})`,
         time: parts[1] || '09:00 AM',
@@ -622,6 +629,9 @@ class BusinessLogicLayer {
       const u = (db.units || []).find(x => x.id === insp.unitId);
       events.push({
         id: 'insp-' + insp.id,
+        inspectionId: insp.id,
+        unitId: insp.unitId,
+        tenancyId: insp.tenancyId,
         date: insp.date,
         title: `${insp.type}: ${u ? u.unitNumber : 'Unit'}`,
         time: '10:00 AM',
@@ -640,7 +650,8 @@ class BusinessLogicLayer {
         time: ce.time || 'All Day',
         type: ce.type || 'Custom',
         chipClass: 'chip-custom',
-        status: 'Scheduled'
+        status: 'Scheduled',
+        notes: ce.notes || ''
       });
     });
 

@@ -200,11 +200,15 @@
       return `
         <div class="kanban-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <strong>${u ? u.unitNumber : 'Unit'}</strong>
-            <span class="badge ${isUrgent ? 'badge-overdue' : 'badge-warning'}">${r.urgency}</span>
+            <strong>
+              <span class="clickable-entity" onclick="showUnitModal('${u ? u.id : ''}')" title="Click to view unit specifications">🚪 ${u ? u.unitNumber : 'Unit'}</span>
+            </strong>
+            <span class="badge ${isUrgent ? 'badge-overdue' : 'badge-warning'}" onclick="showMaintenanceModal('${r.id}')" style="cursor: pointer;" title="Click to inspect maintenance case">${r.urgency}</span>
           </div>
 
-          <div style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">${r.issue}</div>
+          <div style="font-size: 14px; font-weight: 800; margin-top: 2px;">
+            <span class="clickable-entity" onclick="showMaintenanceModal('${r.id}')" title="Click to inspect case details">🔧 ${r.issue}</span>
+          </div>
           <div style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">${r.description || 'No description entered.'}</div>
 
           <div style="background: #f8fafc; padding: 8px 10px; border-radius: 6px; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
@@ -225,16 +229,17 @@
           ` : ''}
 
           <div style="display: flex; gap: 6px; margin-top: 6px; pt-2; border-top: 1px solid var(--border-subtle);">
+            <button class="btn btn-secondary btn-sm" onclick="showMaintenanceModal('${r.id}')">Inspect</button>
             ${r.status === 'Submitted' ? `
-              <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="openAssignVendorModal('${r.id}')">Assign Vendor →</button>
+              <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="openAssignVendorModal('${r.id}')">Assign Vendor →</button>
             ` : ''}
 
             ${r.status === 'In Progress' ? `
-              <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="openResolvePollModal('${r.id}')">Resolve & Request Poll ✔️</button>
+              <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="openResolvePollModal('${r.id}')">Resolve & Poll ✔️</button>
             ` : ''}
 
             ${r.status === 'Resolved' ? `
-              <span style="font-size: 11px; color: #047857; font-weight: 700; padding: 4px;">✔️ Case Closed & Invoiced</span>
+              <span style="font-size: 11px; color: #047857; font-weight: 700; padding: 4px; display: flex; align-items: center;">✔️ Closed</span>
             ` : ''}
           </div>
         </div>
