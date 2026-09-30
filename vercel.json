@@ -1,5 +1,7 @@
 {
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" }
-  ]
+  "functions": {
+    "server.js": {
+      "includeFiles": "{*.html,css/**,js/**}"
+    }
+  }
 }

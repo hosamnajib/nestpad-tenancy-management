@@ -10,23 +10,31 @@ const CONFIG_FILE = path.join(__dirname, 'db_config.json');
 
 // Read DB Configuration
 let config = {
-  activeDatabase: process.env.ACTIVE_DATABASE || 'mysql',
+  activeDatabase: 'mysql',
   mysql: {
-    host: process.env.MYSQL_HOST || 'localhost',
-    port: process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT, 10) : 3306,
-    user: process.env.MYSQL_USER || 'root',
-    password: process.env.MYSQL_PASSWORD !== undefined ? process.env.MYSQL_PASSWORD : 'hosam123',
-    database: process.env.MYSQL_DATABASE || 'nestpad_db'
+    host: 'localhost',
+    port: 3306,
+    user: 'root',
+    password: 'hosam123',
+    database: 'nestpad_db'
   }
 };
 
 if (fs.existsSync(CONFIG_FILE)) {
   try {
-    config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+    const fileConf = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+    config = { ...config, ...fileConf, mysql: { ...config.mysql, ...(fileConf.mysql || {}) } };
   } catch (e) {
     console.warn('[Config] Failed to parse db_config.json, using defaults.', e.message);
   }
 }
+
+if (process.env.ACTIVE_DATABASE) config.activeDatabase = process.env.ACTIVE_DATABASE;
+if (process.env.MYSQL_HOST) config.mysql.host = process.env.MYSQL_HOST;
+if (process.env.MYSQL_PORT) config.mysql.port = parseInt(process.env.MYSQL_PORT, 10);
+if (process.env.MYSQL_USER) config.mysql.user = process.env.MYSQL_USER;
+if (process.env.MYSQL_PASSWORD !== undefined) config.mysql.password = process.env.MYSQL_PASSWORD;
+if (process.env.MYSQL_DATABASE) config.mysql.database = process.env.MYSQL_DATABASE;
 
 let activeEngine = config.activeDatabase || 'mysql';
 let mysqlPool = null;
@@ -78,13 +86,23 @@ const TABLE_MAP = {
 // ==========================================
 async function initDatabase() {
   if (activeEngine === 'mysql') {
+    // If running on Vercel and host is still localhost (no remote cloud DB set yet), switch to standby mode safely
+    if (process.env.VERCEL && (!process.env.MYSQL_HOST || config.mysql.host === 'localhost')) {
+      console.log('ℹ️ [Database] Running on Vercel without Cloud MySQL. Operating in client-side persistence mode.');
+      activeEngine = 'standby';
+      return;
+    }
+
     console.log(`[Database] Connecting to MySQL server at ${config.mysql.host}:${config.mysql.port}, database: ${config.mysql.database}`);
     try {
+      const ssl = process.env.MYSQL_SSL === 'true' || process.env.MYSQL_SSL === '1' ? { rejectUnauthorized: false } : undefined;
       const rootConn = await mysql.createConnection({
         host: config.mysql.host,
         port: config.mysql.port,
         user: config.mysql.user,
-        password: config.mysql.password
+        password: config.mysql.password,
+        ssl,
+        connectTimeout: 5000
       });
       await rootConn.query(`CREATE DATABASE IF NOT EXISTS \`${config.mysql.database}\`;`);
       await rootConn.end();
@@ -95,9 +113,11 @@ async function initDatabase() {
         user: config.mysql.user,
         password: config.mysql.password,
         database: config.mysql.database,
+        ssl,
         waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0
+        connectionLimit: 5,
+        queueLimit: 0,
+        connectTimeout: 5000
       });
 
       await initMySQLSchema();
@@ -105,18 +125,28 @@ async function initDatabase() {
       await seedMySQLIfEmpty();
       return;
     } catch (err) {
-      console.error('❌ [Database] Failed to initialize MySQL. Falling back to SQLite:', err.message);
+      console.warn('⚠️ [Database] Failed to initialize MySQL. Attempting SQLite fallback:', err.message);
       activeEngine = 'sqlite';
     }
   }
 
-  // SQLite Fallback
-  console.log(`[Database] Initializing SQLite database file: ${DB_FILE}`);
-  sqliteDb = new DatabaseSync(DB_FILE);
-  sqliteDb.exec('PRAGMA journal_mode = WAL;');
-  sqliteDb.exec('PRAGMA foreign_keys = ON;');
-  initSQLiteSchema();
-  seedSQLiteIfEmpty();
+  // SQLite Fallback (Safe)
+  try {
+    const { DatabaseSync } = require('node:sqlite');
+    if (DatabaseSync) {
+      console.log(`[Database] Initializing SQLite database file: ${DB_FILE}`);
+      sqliteDb = new DatabaseSync(DB_FILE);
+      sqliteDb.exec('PRAGMA journal_mode = WAL;');
+      sqliteDb.exec('PRAGMA foreign_keys = ON;');
+      initSQLiteSchema();
+      seedSQLiteIfEmpty();
+      return;
+    }
+  } catch (sqliteErr) {
+    console.log('ℹ️ [Database] SQLite not available in this environment. Operating in client-side standby mode.');
+  }
+
+  activeEngine = 'standby';
 }
 
 async function initMySQLSchema() {
@@ -283,7 +313,8 @@ function getInitialBaselineData() {
       if (startIdx !== -1) {
         const dummyScope = {};
         const evalStr = code.slice(startIdx, code.indexOf('// Database Store Wrapper')) + '\ndummyScope.data = INITIAL_SPEC_DATABASE;';
-        eval(evalStr);
+        const parseFn = new Function('dummyScope', evalStr);
+        parseFn(dummyScope);
         return dummyScope.data;
       }
     } catch (e) {
@@ -572,9 +603,20 @@ function getFullStateFromSQLite() {
 
 async function getFullState() {
   if (activeEngine === 'mysql' && mysqlPool) {
-    return await getFullStateFromMySQL();
+    try {
+      return await getFullStateFromMySQL();
+    } catch (e) {
+      console.warn('[Database] MySQL getFullState failed, using fallback:', e.message);
+    }
   }
-  return getFullStateFromSQLite();
+  if (sqliteDb) {
+    try {
+      return getFullStateFromSQLite();
+    } catch (e) {
+      console.warn('[Database] SQLite getFullState failed:', e.message);
+    }
+  }
+  return getInitialBaselineData() || {};
 }
 
 // ==========================================
@@ -610,24 +652,34 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  let filePath = path.join(__dirname, pathname === '/' ? 'dashboard.html' : pathname);
+  const relPath = pathname === '/' ? 'dashboard.html' : pathname.replace(/^\//, '');
+  const candidates = [
+    path.join(process.cwd(), relPath),
+    path.join(__dirname, relPath),
+    path.join(process.cwd(), relPath + '.html'),
+    path.join(__dirname, relPath + '.html')
+  ];
 
-  fs.stat(filePath, (err, stats) => {
-    if (err || !stats.isFile()) {
-      if (fs.existsSync(filePath + '.html')) {
-        filePath = filePath + '.html';
-      } else {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('404 Not Found');
-        return;
+  let filePath = null;
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c) && fs.statSync(c).isFile()) {
+        filePath = c;
+        break;
       }
-    }
+    } catch (e) {}
+  }
 
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': contentType });
-    fs.createReadStream(filePath).pipe(res);
-  });
+  if (!filePath) {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('404 Not Found');
+    return;
+  }
+
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+  res.writeHead(200, { 'Content-Type': contentType });
+  fs.createReadStream(filePath).pipe(res);
 });
 
 function readJsonBody(req) {
@@ -671,9 +723,9 @@ async function handleApiRoute(req, res, pathname) {
 
       const stats = {
         status: 'ok',
-        engine: `MySQL (${config.mysql.host}:${config.mysql.port} / ${config.mysql.database})`,
+        engine: mysqlPool ? `MySQL (${config.mysql.host}:${config.mysql.port} / ${config.mysql.database})` : 'Client-Side Storage (Standby)',
         activeDatabase: activeEngine,
-        databaseTarget: `${config.mysql.user}@${config.mysql.host}/${config.mysql.database}`,
+        databaseTarget: mysqlPool ? `${config.mysql.user}@${config.mysql.host}/${config.mysql.database}` : 'Local Client Storage',
         uptimeSeconds: Math.floor(process.uptime()),
         timestamp: new Date().toISOString(),
         counts
@@ -766,7 +818,7 @@ async function handleApiRoute(req, res, pathname) {
 }
 
 // ==========================================
-// 4. Start Server
+// 4. Start Server / Export for Serverless
 // ==========================================
 async function main() {
   try {
@@ -786,6 +838,15 @@ async function main() {
   });
 }
 
-main().catch(err => {
-  console.error('Fatal Server Error:', err);
-});
+module.exports = server;
+
+if (require.main === module) {
+  main().catch(err => {
+    console.error('Fatal Server Error:', err);
+  });
+} else {
+  // Trigger non-blocking database init in serverless environments (like Vercel)
+  initDatabase().catch(err => {
+    console.warn('[Serverless DB Init]:', err.message);
+  });
+}

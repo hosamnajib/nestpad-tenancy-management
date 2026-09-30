@@ -2,8 +2,9 @@
   "name": "nestpad-tenancy-management",
   "version": "1.0.0",
   "description": "NestPad Professional Tenancy Management System",
+  "main": "server.js",
   "scripts": {
-    "start": "node local-server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "mysql2": "^3.12.0"
